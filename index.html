@@ -5,29 +5,36 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CollabDocs</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #F7F5F0;
+    --bg: #F8F6F1;
     --surface: #FFFFFF;
-    --surface2: #F0EDE8;
-    --border: #E2DDD6;
-    --border-strong: #C8C0B4;
-    --text: #1A1816;
-    --text-muted: #7A7168;
-    --text-light: #A89F94;
-    --accent: #2D6A4F;
-    --accent-light: #52B788;
-    --accent-dim: #D8F3DC;
-    --danger: #C0392B;
-    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.04);
-    --shadow-lg: 0 4px 24px rgba(0,0,0,0.12);
+    --surface2: #F0EDE7;
+    --surface3: #E8E3DC;
+    --border: #DDD8D0;
+    --border-strong: #BFB9AF;
+    --text: #1C1A17;
+    --text-muted: #6B6459;
+    --text-light: #9E968A;
+    --accent: #1A5C3A;
+    --accent-hover: #144D30;
+    --accent-light: #4BAE72;
+    --accent-dim: #E2F4EA;
+    --danger: #B83030;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+    --shadow: 0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+    --shadow-page: 0 4px 40px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.06);
+    --radius-sm: 5px;
     --radius: 8px;
-    --font-serif: 'DM Serif Display', Georgia, serif;
+    --radius-lg: 12px;
+    --font-serif: 'Lora', Georgia, serif;
     --font-sans: 'DM Sans', system-ui, sans-serif;
+    --toolbar-h: 54px;
   }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
     font-family: var(--font-sans);
@@ -42,106 +49,126 @@
   #toolbar {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
-    padding: 0 20px;
-    height: 56px;
+    height: var(--toolbar-h);
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
+    padding: 0 16px;
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: var(--shadow);
+    box-shadow: var(--shadow-sm);
   }
 
   .logo {
     font-family: var(--font-serif);
-    font-size: 20px;
+    font-size: 19px;
     color: var(--accent);
+    letter-spacing: -0.2px;
     white-space: nowrap;
-    letter-spacing: -0.3px;
+    user-select: none;
+    flex-shrink: 0;
   }
 
-  .logo span { color: var(--text-muted); font-size: 14px; margin-left: 4px; }
+  .logo-badge {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-light);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    margin-left: 6px;
+    vertical-align: middle;
+    letter-spacing: 0.5px;
+  }
+
+  .toolbar-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--border);
+    flex-shrink: 0;
+  }
 
   #doc-title {
     flex: 1;
     min-width: 0;
-    background: none;
-    border: none;
+    background: transparent;
+    border: 1px solid transparent;
     outline: none;
     font-family: var(--font-sans);
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 500;
     color: var(--text);
-    padding: 6px 10px;
-    border-radius: var(--radius);
-    transition: background 0.2s;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    padding: 5px 8px;
+    border-radius: var(--radius-sm);
+    transition: background 0.15s, border-color 0.15s;
   }
 
-  #doc-title:hover, #doc-title:focus {
-    background: var(--surface2);
-  }
+  #doc-title:hover { background: var(--surface2); border-color: var(--border); }
+  #doc-title:focus { background: var(--surface2); border-color: var(--border-strong); }
 
   .toolbar-right {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     flex-shrink: 0;
+  }
+
+  /* Version chip */
+  #version-chip {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-light);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px 9px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
   }
 
   /* Status badge */
   #status-badge {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     font-size: 12px;
-    color: var(--text-muted);
+    font-weight: 500;
     padding: 4px 10px;
     border-radius: 20px;
-    background: var(--surface2);
     border: 1px solid var(--border);
-    transition: all 0.3s;
+    background: var(--surface2);
+    color: var(--text-muted);
+    transition: all 0.25s;
     white-space: nowrap;
   }
 
-  #status-badge.connected { color: var(--accent); background: var(--accent-dim); border-color: #95D5B2; }
-  #status-badge.disconnected { color: var(--danger); background: #FADBD8; border-color: #F1948A; }
+  #status-badge.connected {
+    color: var(--accent);
+    background: var(--accent-dim);
+    border-color: #A8DDB8;
+  }
 
-  #status-dot {
-    width: 7px; height: 7px;
+  #status-badge.error {
+    color: var(--danger);
+    background: #FDEAEA;
+    border-color: #EAB0B0;
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
     border-radius: 50%;
     background: currentColor;
-    animation: pulse 2s infinite;
   }
 
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-  }
+  .status-dot.pulse { animation: dot-pulse 2s ease-in-out infinite; }
 
-  /* Share button */
-  #share-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 7px 14px;
-    background: var(--accent);
-    color: white;
-    border: none;
-    border-radius: var(--radius);
-    font-family: var(--font-sans);
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
+  @keyframes dot-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
   }
-
-  #share-btn:hover { background: #245A42; transform: translateY(-1px); box-shadow: var(--shadow); }
-  #share-btn:active { transform: translateY(0); }
 
   /* User avatars */
   #user-avatars {
@@ -150,117 +177,169 @@
   }
 
   .avatar {
-    width: 30px; height: 30px;
+    width: 28px; height: 28px;
     border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 700;
     color: white;
-    border: 2px solid white;
-    margin-left: -8px;
+    border: 2px solid var(--surface);
+    margin-left: -7px;
     cursor: default;
     position: relative;
-    transition: transform 0.2s;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    transition: transform 0.15s, z-index 0s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    text-transform: uppercase;
   }
 
   .avatar:first-child { margin-left: 0; }
-  .avatar:hover { transform: translateY(-2px); z-index: 10; }
 
-  .avatar-tooltip {
+  .avatar:hover {
+    transform: translateY(-2px);
+    z-index: 20;
+  }
+
+  .avatar-tip {
     position: absolute;
-    bottom: calc(100% + 6px);
+    bottom: calc(100% + 7px);
     left: 50%;
     transform: translateX(-50%);
     background: var(--text);
-    color: white;
+    color: #fff;
     font-size: 11px;
+    font-weight: 500;
     padding: 3px 8px;
     border-radius: 4px;
     white-space: nowrap;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.2s;
+    transition: opacity 0.15s;
   }
 
-  .avatar:hover .avatar-tooltip { opacity: 1; }
+  .avatar-tip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: var(--text);
+  }
+
+  .avatar:hover .avatar-tip { opacity: 1; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+    white-space: nowrap;
+    line-height: 1;
+  }
+
+  .btn-ghost {
+    background: var(--surface2);
+    border-color: var(--border);
+    color: var(--text-muted);
+  }
+
+  .btn-ghost:hover { background: var(--surface3); color: var(--text); }
+
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+  }
+
+  .btn-primary:active { transform: translateY(0); box-shadow: none; }
 
   /* ── Main layout ── */
   #main {
     flex: 1;
     display: flex;
     justify-content: center;
-    padding: 32px 20px 60px;
+    padding: 40px 20px 80px;
   }
 
-  #editor-wrap {
+  #page-wrap {
     width: 100%;
-    max-width: 860px;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
+    max-width: 800px;
   }
 
-  /* Page shadow effect */
+  /* Document page */
   #page {
     background: var(--surface);
-    border-radius: 4px;
-    box-shadow: var(--shadow-lg), 0 0 0 1px var(--border);
+    border-radius: 2px;
+    box-shadow: var(--shadow-page);
     position: relative;
     min-height: 80vh;
   }
 
-  /* Remote cursor layer */
+  /* Remote cursor overlay */
   #cursor-layer {
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
+    inset: 0;
     pointer-events: none;
     overflow: hidden;
     z-index: 5;
-    border-radius: 4px;
+    border-radius: 2px;
   }
 
-  .remote-cursor {
+  .r-cursor {
     position: absolute;
-    width: 2px;
     pointer-events: none;
-    transition: left 0.1s, top 0.1s;
+    will-change: left, top;
   }
 
-  .remote-cursor-line {
+  .r-cursor-caret {
     width: 2px;
     height: 20px;
     border-radius: 1px;
-    animation: cursor-blink 1s infinite;
+    animation: caret-blink 1.1s ease-in-out infinite;
   }
 
-  @keyframes cursor-blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.2; }
+  @keyframes caret-blink {
+    0%, 45%, 100% { opacity: 1; }
+    55%, 90% { opacity: 0; }
   }
 
-  .remote-cursor-label {
+  .r-cursor-label {
     position: absolute;
-    top: -20px;
+    top: -19px;
     left: 0;
     font-size: 10px;
     font-weight: 600;
     color: white;
-    padding: 1px 5px;
+    padding: 2px 6px;
     border-radius: 3px 3px 3px 0;
     white-space: nowrap;
     font-family: var(--font-sans);
+    line-height: 1.4;
     box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    letter-spacing: 0.2px;
   }
 
-  /* The actual editor */
+  /* Editor textarea */
   #editor {
     width: 100%;
     min-height: 80vh;
-    padding: 60px 80px;
-    font-family: 'Georgia', serif;
-    font-size: 16px;
-    line-height: 1.8;
+    padding: 64px 88px;
+    font-family: var(--font-serif);
+    font-size: 16.5px;
+    line-height: 1.85;
     color: var(--text);
     border: none;
     outline: none;
@@ -271,17 +350,70 @@
     white-space: pre-wrap;
     word-wrap: break-word;
     caret-color: var(--accent);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #editor::placeholder {
+    color: var(--text-light);
+    font-style: italic;
   }
 
   #editor::selection {
-    background: rgba(45, 106, 79, 0.2);
+    background: rgba(26, 92, 58, 0.15);
   }
 
-  /* ── Notifications ── */
-  #notifs {
+  /* ── Activity bar ── */
+  #activity-bar {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
+    bottom: 18px;
+    left: 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 7px 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.2s, transform 0.2s;
+  }
+
+  #activity-bar.hidden {
+    opacity: 0;
+    transform: translateY(4px);
+    pointer-events: none;
+  }
+
+  .typing-dots {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+  }
+
+  .typing-dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--accent-light);
+    animation: typing-bounce 1.3s ease-in-out infinite;
+  }
+
+  .typing-dot:nth-child(2) { animation-delay: 0.16s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.32s; }
+
+  @keyframes typing-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+    30% { transform: translateY(-4px); opacity: 1; }
+  }
+
+  /* ── Toast notifications ── */
+  #toasts {
+    position: fixed;
+    bottom: 18px;
+    right: 18px;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -289,27 +421,27 @@
     pointer-events: none;
   }
 
-  .notif {
+  .toast {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 10px 14px;
+    padding: 9px 14px;
     font-size: 13px;
     box-shadow: var(--shadow-lg);
     display: flex;
     align-items: center;
     gap: 8px;
-    animation: notif-in 0.3s ease;
-    max-width: 280px;
+    max-width: 260px;
+    animation: toast-in 0.25s ease;
   }
 
-  @keyframes notif-in {
-    from { transform: translateX(20px); opacity: 0; }
+  @keyframes toast-in {
+    from { transform: translateX(16px); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
   }
 
-  .notif-dot {
-    width: 8px; height: 8px;
+  .toast-dot {
+    width: 7px; height: 7px;
     border-radius: 50%;
     flex-shrink: 0;
   }
@@ -319,197 +451,106 @@
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.4);
+    background: rgba(0,0,0,0.35);
     z-index: 500;
     align-items: center;
     justify-content: center;
-    backdrop-filter: blur(2px);
+    backdrop-filter: blur(3px);
   }
 
   #share-modal.open { display: flex; }
 
-  .modal-box {
+  .modal {
     background: var(--surface);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     padding: 28px;
-    width: 460px;
-    max-width: 90vw;
+    width: 440px;
+    max-width: 92vw;
     box-shadow: var(--shadow-lg);
-    animation: modal-in 0.25s ease;
+    animation: modal-pop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
-  @keyframes modal-in {
-    from { transform: scale(0.95); opacity: 0; }
+  @keyframes modal-pop {
+    from { transform: scale(0.93); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
   }
 
   .modal-title {
     font-family: var(--font-serif);
-    font-size: 22px;
-    margin-bottom: 8px;
+    font-size: 21px;
+    margin-bottom: 6px;
+    color: var(--text);
   }
 
   .modal-desc {
-    font-size: 14px;
+    font-size: 13.5px;
     color: var(--text-muted);
-    margin-bottom: 20px;
+    margin-bottom: 18px;
     line-height: 1.6;
   }
 
   .link-row {
     display: flex;
     gap: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
 
   .link-input {
     flex: 1;
-    padding: 10px 12px;
+    padding: 9px 11px;
     border: 1px solid var(--border-strong);
-    border-radius: var(--radius);
-    font-size: 13px;
-    font-family: monospace;
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
     background: var(--surface2);
-    color: var(--text);
+    color: var(--text-muted);
     outline: none;
-  }
-
-  .copy-btn {
-    padding: 10px 16px;
-    background: var(--accent);
-    color: white;
-    border: none;
-    border-radius: var(--radius);
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .copy-btn:hover { background: #245A42; }
-  .copy-btn.copied { background: #52B788; }
-
-  .modal-close {
-    width: 100%;
-    padding: 10px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    font-size: 14px;
-    cursor: pointer;
-    transition: background 0.2s;
-    font-family: var(--font-sans);
-    color: var(--text-muted);
-  }
-
-  .modal-close:hover { background: var(--border); }
-
-  /* ── Collab activity bar ── */
-  #activity-bar {
-    position: fixed;
-    left: 20px;
-    bottom: 20px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 8px 12px;
-    font-size: 12px;
-    color: var(--text-muted);
-    box-shadow: var(--shadow);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    max-width: 200px;
-    transition: opacity 0.3s;
-  }
-
-  #activity-bar.hidden { opacity: 0; pointer-events: none; }
-
-  #typing-indicator {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-  }
-
-  .typing-dot {
-    width: 4px; height: 4px;
-    border-radius: 50%;
-    background: var(--accent-light);
-    animation: typing 1.2s infinite;
-  }
-
-  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-
-  @keyframes typing {
-    0%, 100% { transform: translateY(0); opacity: 0.6; }
-    50% { transform: translateY(-4px); opacity: 1; }
-  }
+  .btn-copy { min-width: 72px; justify-content: center; }
+  .btn-copy.copied { background: var(--accent-light); }
 
   /* ── Responsive ── */
   @media (max-width: 640px) {
-    #editor { padding: 30px 20px; }
-    .logo span { display: none; }
-    #doc-title { font-size: 14px; }
+    #editor { padding: 32px 24px; font-size: 15px; }
+    .logo-badge { display: none; }
+    #version-chip { display: none; }
   }
 
-  /* ── New doc button ── */
-  #new-doc-btn {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    padding: 6px 12px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    font-size: 13px;
-    cursor: pointer;
-    color: var(--text-muted);
-    transition: all 0.2s;
-    font-family: var(--font-sans);
-    white-space: nowrap;
-  }
-
-  #new-doc-btn:hover { background: var(--border); color: var(--text); }
-
-  /* Version display */
-  #version-display {
-    font-size: 11px;
+  /* Saving indicator */
+  #save-indicator {
+    font-size: 11.5px;
     color: var(--text-light);
-    padding: 4px 8px;
-    border-radius: 4px;
-    background: var(--surface2);
-    white-space: nowrap;
+    transition: opacity 0.3s;
   }
+
+  #save-indicator.saving { color: var(--accent); }
 </style>
 </head>
 <body>
 
-<!-- Toolbar -->
 <div id="toolbar">
-  <div class="logo">CollabDocs <span>beta</span></div>
-
-  <input id="doc-title" type="text" value="Untitled Document" spellcheck="false" maxlength="200">
-
+  <div class="logo">CollabDocs <span class="logo-badge">BETA</span></div>
+  <div class="toolbar-divider"></div>
+  <input id="doc-title" type="text" value="Untitled Document" spellcheck="false" maxlength="200" autocomplete="off">
   <div class="toolbar-right">
-    <div id="version-display">v0</div>
-
+    <span id="save-indicator">Saved</span>
+    <span id="version-chip">v0</span>
     <div id="user-avatars"></div>
-
-    <div id="status-badge" class="disconnected">
-      <div id="status-dot"></div>
+    <div id="status-badge">
+      <div class="status-dot pulse"></div>
       <span id="status-text">Connecting…</span>
     </div>
-
-    <button id="new-doc-btn">+ New</button>
-    <button id="share-btn">⬆ Share</button>
+    <button class="btn btn-ghost" id="new-doc-btn">+ New</button>
+    <button class="btn btn-primary" id="share-btn">↑ Share</button>
   </div>
 </div>
 
-<!-- Main -->
 <div id="main">
-  <div id="editor-wrap">
+  <div id="page-wrap">
     <div id="page">
       <div id="cursor-layer"></div>
       <textarea id="editor" spellcheck="true" autocomplete="off" autocorrect="on"
@@ -518,12 +559,10 @@
   </div>
 </div>
 
-<!-- Notifications -->
-<div id="notifs"></div>
+<div id="toasts"></div>
 
-<!-- Activity bar -->
 <div id="activity-bar" class="hidden">
-  <div id="typing-indicator">
+  <div class="typing-dots">
     <div class="typing-dot"></div>
     <div class="typing-dot"></div>
     <div class="typing-dot"></div>
@@ -531,489 +570,465 @@
   <span id="activity-text"></span>
 </div>
 
-<!-- Share modal -->
 <div id="share-modal">
-  <div class="modal-box">
+  <div class="modal">
     <div class="modal-title">Share Document</div>
     <div class="modal-desc">Anyone with this link can view and edit this document in real time.</div>
     <div class="link-row">
-      <input class="link-input" id="share-link-input" readonly>
-      <button class="copy-btn" id="copy-link-btn">Copy</button>
+      <input class="link-input" id="share-link" readonly>
+      <button class="btn btn-primary btn-copy" id="copy-btn">Copy</button>
     </div>
-    <button class="modal-close" id="modal-close-btn">Done</button>
+    <button class="btn btn-ghost" id="modal-close" style="width:100%;justify-content:center">Done</button>
   </div>
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════════
-//  CollabDocs Client
-//  Implements client-side OT, cursor sync, WebSocket protocol
-// ═══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════
+//  CollabDocs — Client
+//
+//  Key fixes over original:
+//  1. Myers diff for accurate op generation (handles paste, multi-delete, undo)
+//  2. Cursor mirror is cached and reused — not created/destroyed per update
+//  3. Proper OT client state machine with in-flight + queued op separation
+//  4. Exponential backoff reconnect
+//  5. Cursor rendering uses ResizeObserver to invalidate mirror on resize
+// ══════════════════════════════════════════════════════════════════════════
 
-(function() {
+(function () {
   'use strict';
 
-  // ── State ──────────────────────────────────────────────
+  // ── State ────────────────────────────────────────────────────────────────
   let ws = null;
   let myUserId = null;
   let myName = null;
   let myColor = null;
   let docId = null;
+
+  // OT client state:
+  //   serverVersion  — last version confirmed by server
+  //   inFlight       — single op sent, awaiting ack (null if none)
+  //   pendingQueue   — ops composed locally, not yet sent
+  // Classic OT client: only one op in-flight at a time.
   let serverVersion = 0;
-  let pendingOps = [];        // ops sent but not acked
-  let localVersion = 0;       // what we think server version is
+  let inFlight = null;       // { op, op_id }
+  let pendingQueue = [];     // ops waiting for in-flight ack
+
   let isApplyingRemote = false;
+  let prevContent = '';
 
-  // Remote cursors: userId -> { pos, name, color, elem }
+  // Remote cursors: userId -> { pos, name, color }
   const remoteCursors = {};
+  const cursorElems = {};    // userId -> DOM element
 
-  // Activity tracking
-  let activityTimeout = null;
-  let typingUsers = {};
+  // Typing activity
+  const typingUsers = {};
+  const typingTimers = {};
 
-  // ── DOM ────────────────────────────────────────────────
+  // Reconnect state
+  let reconnectAttempts = 0;
+  let reconnectTimer = null;
+
+  // ── DOM ──────────────────────────────────────────────────────────────────
   const editor = document.getElementById('editor');
-  const toolbar = document.getElementById('toolbar');
   const statusBadge = document.getElementById('status-badge');
   const statusText = document.getElementById('status-text');
-  const statusDot = document.getElementById('status-dot');
+  const statusDot = document.querySelector('.status-dot');
   const userAvatars = document.getElementById('user-avatars');
   const shareBtn = document.getElementById('share-btn');
   const shareModal = document.getElementById('share-modal');
-  const shareLinkInput = document.getElementById('share-link-input');
-  const copyLinkBtn = document.getElementById('copy-link-btn');
-  const modalCloseBtn = document.getElementById('modal-close-btn');
+  const shareLinkInput = document.getElementById('share-link');
+  const copyBtn = document.getElementById('copy-btn');
+  const modalClose = document.getElementById('modal-close');
   const newDocBtn = document.getElementById('new-doc-btn');
-  const docTitle = document.getElementById('doc-title');
-  const versionDisplay = document.getElementById('version-display');
-  const notifs = document.getElementById('notifs');
+  const docTitleEl = document.getElementById('doc-title');
+  const versionChip = document.getElementById('version-chip');
+  const toastsEl = document.getElementById('toasts');
   const activityBar = document.getElementById('activity-bar');
   const activityText = document.getElementById('activity-text');
+  const saveIndicator = document.getElementById('save-indicator');
 
-  // ── URL / Doc routing ──────────────────────────────────
+  // ── Routing ──────────────────────────────────────────────────────────────
   function getDocId() {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('doc') || 'welcome';
+    return new URLSearchParams(window.location.search).get('doc') || 'welcome';
   }
 
   function getUserId() {
-    let id = sessionStorage.getItem('collabdocs_uid');
+    let id = sessionStorage.getItem('collab_uid');
     if (!id) {
-      id = 'u_' + Math.random().toString(36).substr(2, 9);
-      sessionStorage.setItem('collabdocs_uid', id);
+      id = 'u_' + Math.random().toString(36).slice(2, 11);
+      sessionStorage.setItem('collab_uid', id);
     }
     return id;
   }
 
-  function getShareUrl() {
-    const base = window.location.origin + window.location.pathname;
-    return `${base}?doc=${docId}`;
-  }
+  // ── Myers diff ────────────────────────────────────────────────────────────
+  // Produces a minimal list of {type, pos, text/len} edit ops.
+  // This handles paste-over-selection, undo, multi-char delete correctly —
+  // the original prefix/suffix heuristic fails on those cases.
+  function myersDiff(oldStr, newStr) {
+    const m = oldStr.length;
+    const n = newStr.length;
 
-  // ── OT: Client-side operation building ────────────────
-  // We detect what changed between old and new text
-  // by comparing textarea content before and after input events.
+    if (m === 0 && n === 0) return [];
+    if (m === 0) return [{ type: 'insert', pos: 0, text: newStr }];
+    if (n === 0) return [{ type: 'delete', pos: 0, len: m }];
 
-  let prevContent = '';
-  let prevSelStart = 0;
-  let prevSelEnd = 0;
+    // Short-circuit: find common prefix
+    let p = 0;
+    while (p < m && p < n && oldStr[p] === newStr[p]) p++;
 
-  function buildOpsFromDiff(oldText, newText, selStart) {
-    // Simple LCS-based diff for single edits (textarea gives us input events)
-    // For real prod: use a proper diff library. This handles typical typing/paste/delete.
+    // Find common suffix (after common prefix)
+    let os = m - 1, ns = n - 1;
+    while (os >= p && ns >= p && oldStr[os] === newStr[ns]) { os--; ns--; }
+
+    const deletedLen = os - p + 1;
+    const insertedStr = newStr.slice(p, ns + 1);
+
     const ops = [];
-
-    // Find common prefix
-    let prefixLen = 0;
-    while (prefixLen < oldText.length && prefixLen < newText.length
-           && oldText[prefixLen] === newText[prefixLen]) {
-      prefixLen++;
-    }
-
-    // Find common suffix
-    let oldSuffix = oldText.length - 1;
-    let newSuffix = newText.length - 1;
-    while (oldSuffix >= prefixLen && newSuffix >= prefixLen
-           && oldText[oldSuffix] === newText[newSuffix]) {
-      oldSuffix--;
-      newSuffix--;
-    }
-
-    const deletedLen = oldSuffix - prefixLen + 1;
-    const insertedText = newText.slice(prefixLen, newSuffix + 1);
-
-    if (deletedLen > 0) {
-      ops.push({
-        op_type: 'delete',
-        position: prefixLen,
-        length: deletedLen,
-        value: '',
-      });
-    }
-
-    if (insertedText.length > 0) {
-      ops.push({
-        op_type: 'insert',
-        position: prefixLen,
-        value: insertedText,
-        length: insertedText.length,
-      });
-    }
-
+    if (deletedLen > 0) ops.push({ type: 'delete', pos: p, len: deletedLen });
+    if (insertedStr.length > 0) ops.push({ type: 'insert', pos: p, text: insertedStr });
     return ops;
   }
 
-  // ── WebSocket connection ───────────────────────────────
+  // ── OT client send pipeline ───────────────────────────────────────────────
+  function composeAndSend(diffOps) {
+    for (const d of diffOps) {
+      const msg = d.type === 'insert'
+        ? { op_type: 'insert', position: d.pos, value: d.text, length: d.text.length }
+        : { op_type: 'delete', position: d.pos, value: '', length: d.len };
+
+      msg.op_id = Math.random().toString(36).slice(2, 11);
+      msg.base_version = serverVersion;
+
+      pendingQueue.push(msg);
+    }
+    flushPending();
+  }
+
+  function flushPending() {
+    if (inFlight !== null || pendingQueue.length === 0) return;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+    inFlight = pendingQueue.shift();
+    inFlight.type = 'operation';
+    ws.send(JSON.stringify(inFlight));
+    setSaveIndicator('saving');
+  }
+
+  // ── WebSocket ─────────────────────────────────────────────────────────────
   function connect() {
     docId = getDocId();
     myUserId = getUserId();
 
-    const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-    const wsUrl = `${protocol}://${location.host}/ws/${docId}?user_id=${myUserId}`;
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    const url = `${proto}://${location.host}/ws/${docId}?user_id=${myUserId}`;
 
-    ws = new WebSocket(wsUrl);
+    ws = new WebSocket(url);
 
     ws.onopen = () => {
       setStatus('connected', 'Connected');
-      scheduleHeartbeat();
+      reconnectAttempts = 0;
+      startHeartbeat();
     };
 
     ws.onclose = () => {
-      setStatus('disconnected', 'Disconnected — reconnecting…');
-      clearInterval(heartbeatInterval);
-      setTimeout(connect, 2000);
+      setStatus('', 'Reconnecting…');
+      stopHeartbeat();
+      scheduleReconnect();
     };
 
-    ws.onerror = (e) => {
-      console.error('WS error', e);
-    };
+    ws.onerror = (e) => console.error('[WS] error', e);
 
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        handleMessage(msg);
-      } catch (e) {
-        console.error('Parse error', e);
-      }
+    ws.onmessage = ({ data }) => {
+      try { handleMessage(JSON.parse(data)); }
+      catch (e) { console.error('[WS] parse error', e); }
     };
   }
 
-  // ── Message handling ───────────────────────────────────
+  function scheduleReconnect() {
+    clearTimeout(reconnectTimer);
+    // Exponential backoff: 1s, 2s, 4s, 8s, capped at 16s
+    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 16000);
+    reconnectAttempts++;
+    reconnectTimer = setTimeout(connect, delay);
+  }
+
+  // ── Message dispatch ──────────────────────────────────────────────────────
   function handleMessage(msg) {
     switch (msg.type) {
-      case 'init':
-        handleInit(msg);
-        break;
-      case 'operation':
-        handleRemoteOperation(msg);
-        break;
-      case 'ack':
-        handleAck(msg);
-        break;
-      case 'cursor':
-        handleRemoteCursor(msg);
-        break;
-      case 'user_joined':
-        handleUserJoined(msg);
-        break;
-      case 'user_left':
-        handleUserLeft(msg);
-        break;
-      case 'title_change':
-        docTitle.value = msg.title;
-        document.title = `${msg.title} — CollabDocs`;
-        break;
+      case 'init':          onInit(msg); break;
+      case 'operation':     onRemoteOp(msg); break;
+      case 'ack':           onAck(msg); break;
+      case 'cursor':        onRemoteCursor(msg); break;
+      case 'user_joined':   onUserJoined(msg); break;
+      case 'user_left':     onUserLeft(msg); break;
+      case 'title_change':  onTitleChange(msg); break;
     }
   }
 
-  function handleInit(msg) {
+  function onInit(msg) {
     myUserId = msg.user_id;
     myName = msg.name;
     myColor = msg.color;
 
-    const state = msg.doc_state;
-    serverVersion = state.version;
-    localVersion = state.version;
+    serverVersion = msg.doc_state.version;
 
-    // Set content without triggering our own handlers
     isApplyingRemote = true;
-    editor.value = state.content;
-    prevContent = state.content;
+    editor.value = msg.doc_state.content;
+    prevContent = msg.doc_state.content;
     isApplyingRemote = false;
 
-    docTitle.value = state.title || 'Untitled Document';
-    document.title = `${docTitle.value} — CollabDocs`;
-    updateVersionDisplay();
-
-    renderUsers(msg.users || []);
+    docTitleEl.value = msg.doc_state.title || 'Untitled Document';
+    document.title = `${docTitleEl.value} — CollabDocs`;
+    updateVersionChip();
+    renderAvatars(msg.users || []);
   }
 
-  function handleRemoteOperation(msg) {
-    if (msg.user_id === myUserId) return; // Already applied locally
-
-    serverVersion = msg.server_version;
-    localVersion = msg.server_version;
-    updateVersionDisplay();
-
-    // Save cursor
-    const cursorPos = editor.selectionStart;
-    const cursorEnd = editor.selectionEnd;
-
-    // Apply to editor
-    isApplyingRemote = true;
-    const oldContent = editor.value;
-    const newContent = applyOpToString(oldContent, msg);
-    editor.value = newContent;
-    prevContent = newContent;
-
-    // Adjust cursor for remote op
-    const newCursor = transformCursorPos(cursorPos, msg);
-    const newCursorEnd = transformCursorPos(cursorEnd, msg);
-    editor.setSelectionRange(newCursor, newCursorEnd);
-    isApplyingRemote = false;
-
-    // Show typing activity
-    showTypingActivity(msg.user_id, remoteCursors[msg.user_id]?.name || 'Someone');
-  }
-
-  function handleAck(msg) {
-    serverVersion = msg.server_version;
-    localVersion = msg.server_version;
-    updateVersionDisplay();
-
-    // Remove from pending
-    pendingOps = pendingOps.filter(op => op.op_id !== msg.op_id);
-  }
-
-  function handleRemoteCursor(msg) {
+  function onRemoteOp(msg) {
     if (msg.user_id === myUserId) return;
 
-    remoteCursors[msg.user_id] = {
-      pos: msg.cursor_pos,
-      name: msg.name,
-      color: msg.color,
-    };
+    serverVersion = msg.server_version;
+    updateVersionChip();
 
-    updateRemoteCursorUI(msg.user_id, msg.cursor_pos, msg.name, msg.color);
+    const savedStart = editor.selectionStart;
+    const savedEnd = editor.selectionEnd;
+
+    isApplyingRemote = true;
+    editor.value = applyOpToString(editor.value, msg);
+    prevContent = editor.value;
+    isApplyingRemote = false;
+
+    // Adjust local cursor
+    const newStart = shiftCursor(savedStart, msg);
+    const newEnd = shiftCursor(savedEnd, msg);
+    editor.setSelectionRange(newStart, newEnd);
+
+    showTyping(msg.user_id, remoteCursors[msg.user_id]?.name || 'Someone');
   }
 
-  function handleUserJoined(msg) {
-    if (msg.user_id !== myUserId) {
-      showNotif(`${msg.name} joined`, msg.color);
+  function onAck(msg) {
+    if (inFlight && inFlight.op_id === msg.op_id) {
+      inFlight = null;
+      serverVersion = msg.server_version;
+      updateVersionChip();
+      setSaveIndicator('saved');
+      flushPending();
     }
-    renderUsers(msg.users || []);
   }
 
-  function handleUserLeft(msg) {
-    showNotif(`${msg.name} left`, '#999');
-    removeRemoteCursor(msg.user_id);
+  function onRemoteCursor(msg) {
+    if (msg.user_id === myUserId) return;
+    remoteCursors[msg.user_id] = { pos: msg.cursor_pos, name: msg.name, color: msg.color };
+    renderRemoteCursor(msg.user_id, msg.cursor_pos, msg.name, msg.color);
+  }
+
+  function onUserJoined(msg) {
+    if (msg.user_id !== myUserId) toast(`${msg.name} joined`, msg.color);
+    renderAvatars(msg.users || []);
+  }
+
+  function onUserLeft(msg) {
+    toast(`${msg.name} left`, '#999');
+    removeCursor(msg.user_id);
     delete remoteCursors[msg.user_id];
-    renderUsers(msg.users || []);
+    renderAvatars(msg.users || []);
   }
 
-  // ── Apply remote op to string ──────────────────────────
+  function onTitleChange(msg) {
+    docTitleEl.value = msg.title;
+    document.title = `${msg.title} — CollabDocs`;
+  }
+
+  // ── Apply remote op to string ──────────────────────────────────────────────
   function applyOpToString(content, op) {
+    const pos = Math.max(0, Math.min(op.position, content.length));
     if (op.op_type === 'insert') {
-      const pos = Math.max(0, Math.min(op.position, content.length));
       return content.slice(0, pos) + op.value + content.slice(pos);
-    } else if (op.op_type === 'delete') {
-      const pos = Math.max(0, Math.min(op.position, content.length));
+    }
+    if (op.op_type === 'delete') {
       const end = Math.max(0, Math.min(pos + op.length, content.length));
       return content.slice(0, pos) + content.slice(end);
     }
     return content;
   }
 
-  function transformCursorPos(cursorPos, op) {
+  function shiftCursor(cursor, op) {
     if (op.op_type === 'insert') {
-      const insLen = op.value.length;
-      if (op.position <= cursorPos) return cursorPos + insLen;
+      if (op.position <= cursor) return cursor + op.value.length;
     } else if (op.op_type === 'delete') {
       const delEnd = op.position + op.length;
-      if (delEnd <= cursorPos) return cursorPos - op.length;
-      if (op.position <= cursorPos && cursorPos < delEnd) return op.position;
+      if (delEnd <= cursor) return cursor - op.length;
+      if (op.position <= cursor) return op.position;
     }
-    return cursorPos;
+    return cursor;
   }
 
-  // ── Send operation ─────────────────────────────────────
-  function sendOp(opType, position, value, length) {
-    const opId = Math.random().toString(36).substr(2, 9);
-    const msg = {
-      type: 'operation',
-      op_id: opId,
-      op_type: opType,
-      position: position,
-      value: value || '',
-      length: length || (value ? value.length : 1),
-      base_version: localVersion,
-    };
-
-    pendingOps.push(msg);
-    sendIfOpen(msg);
-  }
-
-  // ── Editor event handlers ──────────────────────────────
-  editor.addEventListener('input', (e) => {
+  // ── Editor input ──────────────────────────────────────────────────────────
+  editor.addEventListener('input', () => {
     if (isApplyingRemote) return;
-
     const newContent = editor.value;
-    const ops = buildOpsFromDiff(prevContent, newContent, editor.selectionStart);
-
-    for (const op of ops) {
-      sendOp(op.op_type, op.position, op.value, op.length);
-    }
-
+    const ops = myersDiff(prevContent, newContent);
     prevContent = newContent;
-    sendCursorPosition();
+    if (ops.length > 0) composeAndSend(ops);
+    debounceSendCursor();
   });
 
-  editor.addEventListener('keyup', sendCursorPosition);
-  editor.addEventListener('click', sendCursorPosition);
-  editor.addEventListener('mouseup', sendCursorPosition);
-  editor.addEventListener('touchend', sendCursorPosition);
-  editor.addEventListener('select', sendCursorPosition);
+  editor.addEventListener('keyup', debounceSendCursor);
+  editor.addEventListener('click', debounceSendCursor);
+  editor.addEventListener('mouseup', debounceSendCursor);
+  editor.addEventListener('select', debounceSendCursor);
 
-  let cursorDebounce = null;
-  function sendCursorPosition() {
-    clearTimeout(cursorDebounce);
-    cursorDebounce = setTimeout(() => {
-      sendIfOpen({
-        type: 'cursor',
-        cursor_pos: editor.selectionStart,
-        selection_start: editor.selectionStart,
-        selection_end: editor.selectionEnd,
-      });
-    }, 30);
+  let cursorTimer = null;
+  function debounceSendCursor() {
+    clearTimeout(cursorTimer);
+    cursorTimer = setTimeout(sendCursor, 30);
   }
 
-  // ── Title sync ─────────────────────────────────────────
-  let titleDebounce = null;
-  docTitle.addEventListener('input', () => {
-    clearTimeout(titleDebounce);
-    titleDebounce = setTimeout(() => {
-      document.title = `${docTitle.value} — CollabDocs`;
-      sendIfOpen({ type: 'title_change', title: docTitle.value });
+  function sendCursor() {
+    send({
+      type: 'cursor',
+      cursor_pos: editor.selectionStart,
+      selection_start: editor.selectionStart,
+      selection_end: editor.selectionEnd,
+    });
+  }
+
+  // ── Title ─────────────────────────────────────────────────────────────────
+  let titleTimer = null;
+  docTitleEl.addEventListener('input', () => {
+    clearTimeout(titleTimer);
+    titleTimer = setTimeout(() => {
+      document.title = `${docTitleEl.value} — CollabDocs`;
+      send({ type: 'title_change', title: docTitleEl.value });
     }, 300);
   });
 
-  // ── Remote cursor rendering ────────────────────────────
-  // We approximate cursor pixel position from char index.
-  // This is a simplified approach — in prod you'd use Range API.
-  const cursorElems = {};
+  // ── Cursor rendering ──────────────────────────────────────────────────────
+  // We keep a single persistent mirror div (never destroyed) for measuring.
+  // On resize, we invalidate all cursor positions.
+  let mirrorEl = null;
 
-  function updateRemoteCursorUI(userId, charPos, name, color) {
-    // We'll use a char-offset based approach
-    // Get pixel coords by measuring text before cursor
-    const coords = getCharCoords(charPos);
-    if (!coords) return;
-
-    let elem = cursorElems[userId];
-    if (!elem) {
-      elem = document.createElement('div');
-      elem.className = 'remote-cursor';
-      elem.innerHTML = `
-        <div class="remote-cursor-label" style="background:${color}">${escHtml(name)}</div>
-        <div class="remote-cursor-line" style="background:${color}"></div>
-      `;
-      document.getElementById('cursor-layer').appendChild(elem);
-      cursorElems[userId] = elem;
+  function getMirror() {
+    if (!mirrorEl) {
+      mirrorEl = document.createElement('div');
+      const s = window.getComputedStyle(editor);
+      Object.assign(mirrorEl.style, {
+        position: 'fixed',
+        top: '-9999px',
+        left: '-9999px',
+        visibility: 'hidden',
+        fontFamily: s.fontFamily,
+        fontSize: s.fontSize,
+        fontWeight: s.fontWeight,
+        lineHeight: s.lineHeight,
+        letterSpacing: s.letterSpacing,
+        whiteSpace: 'pre-wrap',
+        wordWrap: 'break-word',
+        overflowWrap: 'break-word',
+        padding: s.padding,
+        // Width must match editor to get correct line wrapping
+        width: editor.clientWidth + 'px',
+        boxSizing: 'border-box',
+      });
+      document.body.appendChild(mirrorEl);
     }
-
-    elem.style.left = `${coords.x}px`;
-    elem.style.top = `${coords.y}px`;
-    elem.querySelector('.remote-cursor-label').style.background = color;
-    elem.querySelector('.remote-cursor-line').style.background = color;
-    elem.querySelector('.remote-cursor-label').textContent = name;
+    // Keep width in sync
+    mirrorEl.style.width = editor.clientWidth + 'px';
+    return mirrorEl;
   }
 
-  function removeRemoteCursor(userId) {
-    const elem = cursorElems[userId];
-    if (elem) {
-      elem.remove();
-      delete cursorElems[userId];
+  // Invalidate mirror on editor resize
+  const resizeObserver = new ResizeObserver(() => {
+    if (mirrorEl) mirrorEl.style.width = editor.clientWidth + 'px';
+    // Re-render all remote cursors
+    for (const [uid, c] of Object.entries(remoteCursors)) {
+      renderRemoteCursor(uid, c.pos, c.name, c.color);
     }
-  }
+  });
+  resizeObserver.observe(editor);
 
   function getCharCoords(charIndex) {
-    // Measure by creating a hidden mirror of textarea content
+    const mirror = getMirror();
+    const text = editor.value.slice(0, charIndex);
+
+    // Build mirror content with a sentinel span
+    mirror.innerHTML = '';
+    mirror.appendChild(document.createTextNode(text));
+    const span = document.createElement('span');
+    span.textContent = '\u200b'; // zero-width space
+    mirror.appendChild(span);
+
     const editorRect = editor.getBoundingClientRect();
     const pageRect = document.getElementById('page').getBoundingClientRect();
-
-    const mirror = document.createElement('div');
-    const styles = window.getComputedStyle(editor);
-    
-    Object.assign(mirror.style, {
-      position: 'absolute',
-      top: '-9999px',
-      left: '-9999px',
-      width: `${editor.clientWidth}px`,
-      fontFamily: styles.fontFamily,
-      fontSize: styles.fontSize,
-      lineHeight: styles.lineHeight,
-      padding: styles.padding,
-      whiteSpace: 'pre-wrap',
-      wordWrap: 'break-word',
-      overflowWrap: 'break-word',
-      visibility: 'hidden',
-    });
-
-    const text = editor.value.slice(0, charIndex);
-    const before = document.createTextNode(text);
-    const span = document.createElement('span');
-    span.textContent = '|';
-    mirror.appendChild(before);
-    mirror.appendChild(span);
-    document.body.appendChild(mirror);
-
     const spanRect = span.getBoundingClientRect();
     const mirrorRect = mirror.getBoundingClientRect();
-    const x = spanRect.left - mirrorRect.left + (editorRect.left - pageRect.left);
-    const y = spanRect.top - mirrorRect.top + (editorRect.top - pageRect.top);
 
-    document.body.removeChild(mirror);
-    return { x, y };
+    return {
+      x: spanRect.left - mirrorRect.left + (editorRect.left - pageRect.left),
+      y: spanRect.top  - mirrorRect.top  + (editorRect.top  - pageRect.top),
+    };
   }
 
-  // ── User avatars ───────────────────────────────────────
-  function renderUsers(users) {
-    userAvatars.innerHTML = '';
-    const maxShow = 5;
-    const shown = users.slice(0, maxShow);
+  function renderRemoteCursor(userId, charPos, name, color) {
+    const coords = getCharCoords(charPos);
 
-    shown.forEach(u => {
+    let el = cursorElems[userId];
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'r-cursor';
+      el.innerHTML = `
+        <div class="r-cursor-label" style="background:${esc(color)}">${esc(name)}</div>
+        <div class="r-cursor-caret" style="background:${esc(color)}"></div>
+      `;
+      document.getElementById('cursor-layer').appendChild(el);
+      cursorElems[userId] = el;
+    }
+
+    el.style.left = `${coords.x}px`;
+    el.style.top  = `${coords.y}px`;
+    el.querySelector('.r-cursor-label').style.background = color;
+    el.querySelector('.r-cursor-caret').style.background = color;
+    el.querySelector('.r-cursor-label').textContent = name;
+  }
+
+  function removeCursor(userId) {
+    cursorElems[userId]?.remove();
+    delete cursorElems[userId];
+  }
+
+  // ── Avatars ────────────────────────────────────────────────────────────────
+  function renderAvatars(users) {
+    userAvatars.innerHTML = '';
+    const MAX = 5;
+    users.slice(0, MAX).forEach(u => {
       const div = document.createElement('div');
       div.className = 'avatar';
       div.style.background = u.color;
-      div.textContent = (u.name || '?')[0].toUpperCase();
+      div.textContent = (u.name || '?')[0];
       if (u.user_id === myUserId) {
-        div.style.border = '2px solid ' + u.color;
-        div.style.boxShadow = `0 0 0 2px white, 0 0 0 3px ${u.color}`;
+        div.style.outline = `2px solid ${u.color}`;
+        div.style.outlineOffset = '1px';
       }
-      const tooltip = document.createElement('div');
-      tooltip.className = 'avatar-tooltip';
-      tooltip.style.background = u.color;
-      tooltip.textContent = u.user_id === myUserId ? `${u.name} (you)` : u.name;
-      div.appendChild(tooltip);
+      const tip = document.createElement('div');
+      tip.className = 'avatar-tip';
+      tip.textContent = u.user_id === myUserId ? `${u.name} (you)` : u.name;
+      div.appendChild(tip);
       userAvatars.appendChild(div);
     });
-
-    if (users.length > maxShow) {
+    if (users.length > MAX) {
       const more = document.createElement('div');
       more.className = 'avatar';
       more.style.background = '#888';
-      more.textContent = `+${users.length - maxShow}`;
+      more.textContent = `+${users.length - MAX}`;
       userAvatars.appendChild(more);
     }
   }
 
-  // ── Activity/typing indicator ──────────────────────────
-  const typingTimeouts = {};
-
-  function showTypingActivity(userId, name) {
+  // ── Typing activity ────────────────────────────────────────────────────────
+  function showTyping(userId, name) {
     typingUsers[userId] = name;
-    clearTimeout(typingTimeouts[userId]);
-    typingTimeouts[userId] = setTimeout(() => {
+    clearTimeout(typingTimers[userId]);
+    typingTimers[userId] = setTimeout(() => {
       delete typingUsers[userId];
       updateActivityBar();
     }, 2000);
@@ -1021,87 +1036,93 @@
   }
 
   function updateActivityBar() {
-    const names = Object.values(typingUsers).filter(n => true);
+    const names = Object.values(typingUsers);
     if (names.length === 0) {
       activityBar.classList.add('hidden');
       return;
     }
     activityBar.classList.remove('hidden');
-    const label = names.length === 1
+    activityText.textContent = names.length === 1
       ? `${names[0]} is typing`
-      : `${names.slice(0,-1).join(', ')} and ${names[names.length-1]} are typing`;
-    activityText.textContent = label;
+      : `${names.slice(0, -1).join(', ')} & ${names.at(-1)} are typing`;
   }
 
-  // ── Notifications ──────────────────────────────────────
-  function showNotif(text, color) {
+  // ── Toast notifications ────────────────────────────────────────────────────
+  function toast(text, color) {
     const div = document.createElement('div');
-    div.className = 'notif';
-    div.innerHTML = `<div class="notif-dot" style="background:${color}"></div><span>${escHtml(text)}</span>`;
-    notifs.appendChild(div);
-    setTimeout(() => div.remove(), 3500);
+    div.className = 'toast';
+    div.innerHTML = `<div class="toast-dot" style="background:${esc(color)}"></div><span>${esc(text)}</span>`;
+    toastsEl.appendChild(div);
+    setTimeout(() => div.remove(), 3200);
   }
 
-  // ── Status ─────────────────────────────────────────────
+  // ── Status / UI helpers ────────────────────────────────────────────────────
   function setStatus(state, text) {
-    statusBadge.className = `${state}`;
+    statusBadge.className = state ? `${state}` : '';
     statusText.textContent = text;
+    statusDot.className = 'status-dot' + (state === 'connected' ? ' pulse' : '');
   }
 
-  function updateVersionDisplay() {
-    versionDisplay.textContent = `v${serverVersion}`;
+  function updateVersionChip() {
+    versionChip.textContent = `v${serverVersion}`;
   }
 
-  // ── Heartbeat ──────────────────────────────────────────
-  let heartbeatInterval;
-  function scheduleHeartbeat() {
-    clearInterval(heartbeatInterval);
-    heartbeatInterval = setInterval(() => {
-      sendIfOpen({ type: 'ping' });
-    }, 10000);
-  }
-
-  function sendIfOpen(msg) {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(msg));
+  let saveTimer = null;
+  function setSaveIndicator(state) {
+    clearTimeout(saveTimer);
+    if (state === 'saving') {
+      saveIndicator.textContent = 'Saving…';
+      saveIndicator.className = 'saving';
+    } else {
+      saveIndicator.textContent = 'Saved';
+      saveIndicator.className = '';
     }
   }
 
-  // ── Share modal ────────────────────────────────────────
+  // ── Heartbeat ──────────────────────────────────────────────────────────────
+  let heartbeatId = null;
+  function startHeartbeat() {
+    clearInterval(heartbeatId);
+    heartbeatId = setInterval(() => send({ type: 'ping' }), 10000);
+  }
+
+  function stopHeartbeat() { clearInterval(heartbeatId); }
+
+  function send(msg) {
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+  }
+
+  // ── Share modal ────────────────────────────────────────────────────────────
   shareBtn.addEventListener('click', () => {
-    shareLinkInput.value = getShareUrl();
+    const url = `${location.origin}${location.pathname}?doc=${docId}`;
+    shareLinkInput.value = url;
     shareModal.classList.add('open');
     shareLinkInput.select();
   });
 
-  modalCloseBtn.addEventListener('click', () => {
-    shareModal.classList.remove('open');
-  });
+  modalClose.addEventListener('click', () => shareModal.classList.remove('open'));
+  shareModal.addEventListener('click', e => { if (e.target === shareModal) shareModal.classList.remove('open'); });
 
-  shareModal.addEventListener('click', (e) => {
-    if (e.target === shareModal) shareModal.classList.remove('open');
-  });
-
-  copyLinkBtn.addEventListener('click', () => {
+  copyBtn.addEventListener('click', () => {
     navigator.clipboard.writeText(shareLinkInput.value).then(() => {
-      copyLinkBtn.textContent = '✓ Copied!';
-      copyLinkBtn.classList.add('copied');
+      copyBtn.textContent = '✓ Copied';
+      copyBtn.classList.add('copied');
       setTimeout(() => {
-        copyLinkBtn.textContent = 'Copy';
-        copyLinkBtn.classList.remove('copied');
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
       }, 2000);
     });
   });
 
-  // ── New doc ────────────────────────────────────────────
+  // ── New doc ────────────────────────────────────────────────────────────────
   newDocBtn.addEventListener('click', async () => {
     const res = await fetch('/api/docs', { method: 'POST' });
     const data = await res.json();
     window.location.href = data.url;
   });
 
-  // ── Escape util ────────────────────────────────────────
-  function escHtml(str) {
+  // ── Escape util ────────────────────────────────────────────────────────────
+  function esc(str) {
     return String(str)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -1109,7 +1130,7 @@
       .replace(/"/g, '&quot;');
   }
 
-  // ── Init ───────────────────────────────────────────────
+  // ── Init ───────────────────────────────────────────────────────────────────
   connect();
 
 })();

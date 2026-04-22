@@ -2,7 +2,7 @@
 title: CollabDocs
 emoji: 📝
 colorFrom: green
-colorTo: blue      <-- Change 'teal' to 'blue' (or indigo, purple, etc.)
+colorTo: blue      
 sdk: docker
 pinned: false
 app_port: 7860

@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CollabDocs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --surface2: #F0EDE8;
+    --border: #E2DDD6;
+    --border-strong: #C8C0B4;
+    --text: #1A1816;
+    --text-muted: #7A7168;
+    --text-light: #A89F94;
+    --accent: #2D6A4F;
+    --accent-light: #52B788;
+    --accent-dim: #D8F3DC;
+    --danger: #C0392B;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.04);
+    --shadow-lg: 0 4px 24px rgba(0,0,0,0.12);
+    --radius: 8px;
+    --font-serif: 'DM Serif Display', Georgia, serif;
+    --font-sans: 'DM Sans', system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Toolbar ── */
+  #toolbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow);
+  }
+
+  .logo {
+    font-family: var(--font-serif);
+    font-size: 20px;
+    color: var(--accent);
+    white-space: nowrap;
+    letter-spacing: -0.3px;
+  }
+
+  .logo span { color: var(--text-muted); font-size: 14px; margin-left: 4px; }
+
+  #doc-title {
+    flex: 1;
+    min-width: 0;
+    background: none;
+    border: none;
+    outline: none;
+    font-family: var(--font-sans);
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: var(--radius);
+    transition: background 0.2s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #doc-title:hover, #doc-title:focus {
+    background: var(--surface2);
+  }
+
+  .toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  /* Status badge */
+  #status-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    transition: all 0.3s;
+    white-space: nowrap;
+  }
+
+  #status-badge.connected { color: var(--accent); background: var(--accent-dim); border-color: #95D5B2; }
+  #status-badge.disconnected { color: var(--danger); background: #FADBD8; border-color: #F1948A; }
+
+  #status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Share button */
+  #share-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  #share-btn:hover { background: #245A42; transform: translateY(-1px); box-shadow: var(--shadow); }
+  #share-btn:active { transform: translateY(0); }
+
+  /* User avatars */
+  #user-avatars {
+    display: flex;
+    align-items: center;
+  }
+
+  .avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    border: 2px solid white;
+    margin-left: -8px;
+    cursor: default;
+    position: relative;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  }
+
+  .avatar:first-child { margin-left: 0; }
+  .avatar:hover { transform: translateY(-2px); z-index: 10; }
+
+  .avatar-tooltip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--text);
+    color: white;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+
+  .avatar:hover .avatar-tooltip { opacity: 1; }
+
+  /* ── Main layout ── */
+  #main {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    padding: 32px 20px 60px;
+  }
+
+  #editor-wrap {
+    width: 100%;
+    max-width: 860px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* Page shadow effect */
+  #page {
+    background: var(--surface);
+    border-radius: 4px;
+    box-shadow: var(--shadow-lg), 0 0 0 1px var(--border);
+    position: relative;
+    min-height: 80vh;
+  }
+
+  /* Remote cursor layer */
+  #cursor-layer {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 5;
+    border-radius: 4px;
+  }
+
+  .remote-cursor {
+    position: absolute;
+    width: 2px;
+    pointer-events: none;
+    transition: left 0.1s, top 0.1s;
+  }
+
+  .remote-cursor-line {
+    width: 2px;
+    height: 20px;
+    border-radius: 1px;
+    animation: cursor-blink 1s infinite;
+  }
+
+  @keyframes cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+
+  .remote-cursor-label {
+    position: absolute;
+    top: -20px;
+    left: 0;
+    font-size: 10px;
+    font-weight: 600;
+    color: white;
+    padding: 1px 5px;
+    border-radius: 3px 3px 3px 0;
+    white-space: nowrap;
+    font-family: var(--font-sans);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  }
+
+  /* The actual editor */
+  #editor {
+    width: 100%;
+    min-height: 80vh;
+    padding: 60px 80px;
+    font-family: 'Georgia', serif;
+    font-size: 16px;
+    line-height: 1.8;
+    color: var(--text);
+    border: none;
+    outline: none;
+    resize: none;
+    background: transparent;
+    position: relative;
+    z-index: 10;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    caret-color: var(--accent);
+  }
+
+  #editor::selection {
+    background: rgba(45, 106, 79, 0.2);
+  }
+
+  /* ── Notifications ── */
+  #notifs {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 1000;
+    pointer-events: none;
+  }
+
+  .notif {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    font-size: 13px;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: notif-in 0.3s ease;
+    max-width: 280px;
+  }
+
+  @keyframes notif-in {
+    from { transform: translateX(20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  .notif-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── Share modal ── */
+  #share-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+  }
+
+  #share-modal.open { display: flex; }
+
+  .modal-box {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 28px;
+    width: 460px;
+    max-width: 90vw;
+    box-shadow: var(--shadow-lg);
+    animation: modal-in 0.25s ease;
+  }
+
+  @keyframes modal-in {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .modal-title {
+    font-family: var(--font-serif);
+    font-size: 22px;
+    margin-bottom: 8px;
+  }
+
+  .modal-desc {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+
+  .link-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .link-input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-family: monospace;
+    background: var(--surface2);
+    color: var(--text);
+    outline: none;
+  }
+
+  .copy-btn {
+    padding: 10px 16px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .copy-btn:hover { background: #245A42; }
+  .copy-btn.copied { background: #52B788; }
+
+  .modal-close {
+    width: 100%;
+    padding: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-family: var(--font-sans);
+    color: var(--text-muted);
+  }
+
+  .modal-close:hover { background: var(--border); }
+
+  /* ── Collab activity bar ── */
+  #activity-bar {
+    position: fixed;
+    left: 20px;
+    bottom: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 200px;
+    transition: opacity 0.3s;
+  }
+
+  #activity-bar.hidden { opacity: 0; pointer-events: none; }
+
+  #typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .typing-dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--accent-light);
+    animation: typing 1.2s infinite;
+  }
+
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes typing {
+    0%, 100% { transform: translateY(0); opacity: 0.6; }
+    50% { transform: translateY(-4px); opacity: 1; }
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    #editor { padding: 30px 20px; }
+    .logo span { display: none; }
+    #doc-title { font-size: 14px; }
+  }
+
+  /* ── New doc button ── */
+  #new-doc-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.2s;
+    font-family: var(--font-sans);
+    white-space: nowrap;
+  }
+
+  #new-doc-btn:hover { background: var(--border); color: var(--text); }
+
+  /* Version display */
+  #version-display {
+    font-size: 11px;
+    color: var(--text-light);
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: var(--surface2);
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+<!-- Toolbar -->
+<div id="toolbar">
+  <div class="logo">CollabDocs <span>beta</span></div>
+
+  <input id="doc-title" type="text" value="Untitled Document" spellcheck="false" maxlength="200">
+
+  <div class="toolbar-right">
+    <div id="version-display">v0</div>
+
+    <div id="user-avatars"></div>
+
+    <div id="status-badge" class="disconnected">
+      <div id="status-dot"></div>
+      <span id="status-text">Connecting…</span>
+    </div>
+
+    <button id="new-doc-btn">+ New</button>
+    <button id="share-btn">⬆ Share</button>
+  </div>
+</div>
+
+<!-- Main -->
+<div id="main">
+  <div id="editor-wrap">
+    <div id="page">
+      <div id="cursor-layer"></div>
+      <textarea id="editor" spellcheck="true" autocomplete="off" autocorrect="on"
+        placeholder="Start typing to collaborate…"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- Notifications -->
+<div id="notifs"></div>
+
+<!-- Activity bar -->
+<div id="activity-bar" class="hidden">
+  <div id="typing-indicator">
+    <div class="typing-dot"></div>
+    <div class="typing-dot"></div>
+    <div class="typing-dot"></div>
+  </div>
+  <span id="activity-text"></span>
+</div>
+
+<!-- Share modal -->
+<div id="share-modal">
+  <div class="modal-box">
+    <div class="modal-title">Share Document</div>
+    <div class="modal-desc">Anyone with this link can view and edit this document in real time.</div>
+    <div class="link-row">
+      <input class="link-input" id="share-link-input" readonly>
+      <button class="copy-btn" id="copy-link-btn">Copy</button>
+    </div>
+    <button class="modal-close" id="modal-close-btn">Done</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  CollabDocs Client
+//  Implements client-side OT, cursor sync, WebSocket protocol
+// ═══════════════════════════════════════════════════════════
+
+(function() {
+  'use strict';
+
+  // ── State ──────────────────────────────────────────────
+  let ws = null;
+  let myUserId = null;
+  let myName = null;
+  let myColor = null;
+  let docId = null;
+  let serverVersion = 0;
+  let pendingOps = [];        // ops sent but not acked
+  let localVersion = 0;       // what we think server version is
+  let isApplyingRemote = false;
+
+  // Remote cursors: userId -> { pos, name, color, elem }
+  const remoteCursors = {};
+
+  // Activity tracking
+  let activityTimeout = null;
+  let typingUsers = {};
+
+  // ── DOM ────────────────────────────────────────────────
+  const editor = document.getElementById('editor');
+  const toolbar = document.getElementById('toolbar');
+  const statusBadge = document.getElementById('status-badge');
+  const statusText = document.getElementById('status-text');
+  const statusDot = document.getElementById('status-dot');
+  const userAvatars = document.getElementById('user-avatars');
+  const shareBtn = document.getElementById('share-btn');
+  const shareModal = document.getElementById('share-modal');
+  const shareLinkInput = document.getElementById('share-link-input');
+  const copyLinkBtn = document.getElementById('copy-link-btn');
+  const modalCloseBtn = document.getElementById('modal-close-btn');
+  const newDocBtn = document.getElementById('new-doc-btn');
+  const docTitle = document.getElementById('doc-title');
+  const versionDisplay = document.getElementById('version-display');
+  const notifs = document.getElementById('notifs');
+  const activityBar = document.getElementById('activity-bar');
+  const activityText = document.getElementById('activity-text');
+
+  // ── URL / Doc routing ──────────────────────────────────
+  function getDocId() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('doc') || 'welcome';
+  }
+
+  function getUserId() {
+    let id = sessionStorage.getItem('collabdocs_uid');
+    if (!id) {
+      id = 'u_' + Math.random().toString(36).substr(2, 9);
+      sessionStorage.setItem('collabdocs_uid', id);
+    }
+    return id;
+  }
+
+  function getShareUrl() {
+    const base = window.location.origin + window.location.pathname;
+    return `${base}?doc=${docId}`;
+  }
+
+  // ── OT: Client-side operation building ────────────────
+  // We detect what changed between old and new text
+  // by comparing textarea content before and after input events.
+
+  let prevContent = '';
+  let prevSelStart = 0;
+  let prevSelEnd = 0;
+
+  function buildOpsFromDiff(oldText, newText, selStart) {
+    // Simple LCS-based diff for single edits (textarea gives us input events)
+    // For real prod: use a proper diff library. This handles typical typing/paste/delete.
+    const ops = [];
+
+    // Find common prefix
+    let prefixLen = 0;
+    while (prefixLen < oldText.length && prefixLen < newText.length
+           && oldText[prefixLen] === newText[prefixLen]) {
+      prefixLen++;
+    }
+
+    // Find common suffix
+    let oldSuffix = oldText.length - 1;
+    let newSuffix = newText.length - 1;
+    while (oldSuffix >= prefixLen && newSuffix >= prefixLen
+           && oldText[oldSuffix] === newText[newSuffix]) {
+      oldSuffix--;
+      newSuffix--;
+    }
+
+    const deletedLen = oldSuffix - prefixLen + 1;
+    const insertedText = newText.slice(prefixLen, newSuffix + 1);
+
+    if (deletedLen > 0) {
+      ops.push({
+        op_type: 'delete',
+        position: prefixLen,
+        length: deletedLen,
+        value: '',
+      });
+    }
+
+    if (insertedText.length > 0) {
+      ops.push({
+        op_type: 'insert',
+        position: prefixLen,
+        value: insertedText,
+        length: insertedText.length,
+      });
+    }
+
+    return ops;
+  }
+
+  // ── WebSocket connection ───────────────────────────────
+  function connect() {
+    docId = getDocId();
+    myUserId = getUserId();
+
+    const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+    const wsUrl = `${protocol}://${location.host}/ws/${docId}?user_id=${myUserId}`;
+
+    ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      setStatus('connected', 'Connected');
+      scheduleHeartbeat();
+    };
+
+    ws.onclose = () => {
+      setStatus('disconnected', 'Disconnected — reconnecting…');
+      clearInterval(heartbeatInterval);
+      setTimeout(connect, 2000);
+    };
+
+    ws.onerror = (e) => {
+      console.error('WS error', e);
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        handleMessage(msg);
+      } catch (e) {
+        console.error('Parse error', e);
+      }
+    };
+  }
+
+  // ── Message handling ───────────────────────────────────
+  function handleMessage(msg) {
+    switch (msg.type) {
+      case 'init':
+        handleInit(msg);
+        break;
+      case 'operation':
+        handleRemoteOperation(msg);
+        break;
+      case 'ack':
+        handleAck(msg);
+        break;
+      case 'cursor':
+        handleRemoteCursor(msg);
+        break;
+      case 'user_joined':
+        handleUserJoined(msg);
+        break;
+      case 'user_left':
+        handleUserLeft(msg);
+        break;
+      case 'title_change':
+        docTitle.value = msg.title;
+        document.title = `${msg.title} — CollabDocs`;
+        break;
+    }
+  }
+
+  function handleInit(msg) {
+    myUserId = msg.user_id;
+    myName = msg.name;
+    myColor = msg.color;
+
+    const state = msg.doc_state;
+    serverVersion = state.version;
+    localVersion = state.version;
+
+    // Set content without triggering our own handlers
+    isApplyingRemote = true;
+    editor.value = state.content;
+    prevContent = state.content;
+    isApplyingRemote = false;
+
+    docTitle.value = state.title || 'Untitled Document';
+    document.title = `${docTitle.value} — CollabDocs`;
+    updateVersionDisplay();
+
+    renderUsers(msg.users || []);
+  }
+
+  function handleRemoteOperation(msg) {
+    if (msg.user_id === myUserId) return; // Already applied locally
+
+    serverVersion = msg.server_version;
+    localVersion = msg.server_version;
+    updateVersionDisplay();
+
+    // Save cursor
+    const cursorPos = editor.selectionStart;
+    const cursorEnd = editor.selectionEnd;
+
+    // Apply to editor
+    isApplyingRemote = true;
+    const oldContent = editor.value;
+    const newContent = applyOpToString(oldContent, msg);
+    editor.value = newContent;
+    prevContent = newContent;
+
+    // Adjust cursor for remote op
+    const newCursor = transformCursorPos(cursorPos, msg);
+    const newCursorEnd = transformCursorPos(cursorEnd, msg);
+    editor.setSelectionRange(newCursor, newCursorEnd);
+    isApplyingRemote = false;
+
+    // Show typing activity
+    showTypingActivity(msg.user_id, remoteCursors[msg.user_id]?.name || 'Someone');
+  }
+
+  function handleAck(msg) {
+    serverVersion = msg.server_version;
+    localVersion = msg.server_version;
+    updateVersionDisplay();
+
+    // Remove from pending
+    pendingOps = pendingOps.filter(op => op.op_id !== msg.op_id);
+  }
+
+  function handleRemoteCursor(msg) {
+    if (msg.user_id === myUserId) return;
+
+    remoteCursors[msg.user_id] = {
+      pos: msg.cursor_pos,
+      name: msg.name,
+      color: msg.color,
+    };
+
+    updateRemoteCursorUI(msg.user_id, msg.cursor_pos, msg.name, msg.color);
+  }
+
+  function handleUserJoined(msg) {
+    if (msg.user_id !== myUserId) {
+      showNotif(`${msg.name} joined`, msg.color);
+    }
+    renderUsers(msg.users || []);
+  }
+
+  function handleUserLeft(msg) {
+    showNotif(`${msg.name} left`, '#999');
+    removeRemoteCursor(msg.user_id);
+    delete remoteCursors[msg.user_id];
+    renderUsers(msg.users || []);
+  }
+
+  // ── Apply remote op to string ──────────────────────────
+  function applyOpToString(content, op) {
+    if (op.op_type === 'insert') {
+      const pos = Math.max(0, Math.min(op.position, content.length));
+      return content.slice(0, pos) + op.value + content.slice(pos);
+    } else if (op.op_type === 'delete') {
+      const pos = Math.max(0, Math.min(op.position, content.length));
+      const end = Math.max(0, Math.min(pos + op.length, content.length));
+      return content.slice(0, pos) + content.slice(end);
+    }
+    return content;
+  }
+
+  function transformCursorPos(cursorPos, op) {
+    if (op.op_type === 'insert') {
+      const insLen = op.value.length;
+      if (op.position <= cursorPos) return cursorPos + insLen;
+    } else if (op.op_type === 'delete') {
+      const delEnd = op.position + op.length;
+      if (delEnd <= cursorPos) return cursorPos - op.length;
+      if (op.position <= cursorPos && cursorPos < delEnd) return op.position;
+    }
+    return cursorPos;
+  }
+
+  // ── Send operation ─────────────────────────────────────
+  function sendOp(opType, position, value, length) {
+    const opId = Math.random().toString(36).substr(2, 9);
+    const msg = {
+      type: 'operation',
+      op_id: opId,
+      op_type: opType,
+      position: position,
+      value: value || '',
+      length: length || (value ? value.length : 1),
+      base_version: localVersion,
+    };
+
+    pendingOps.push(msg);
+    sendIfOpen(msg);
+  }
+
+  // ── Editor event handlers ──────────────────────────────
+  editor.addEventListener('input', (e) => {
+    if (isApplyingRemote) return;
+
+    const newContent = editor.value;
+    const ops = buildOpsFromDiff(prevContent, newContent, editor.selectionStart);
+
+    for (const op of ops) {
+      sendOp(op.op_type, op.position, op.value, op.length);
+    }
+
+    prevContent = newContent;
+    sendCursorPosition();
+  });
+
+  editor.addEventListener('keyup', sendCursorPosition);
+  editor.addEventListener('click', sendCursorPosition);
+  editor.addEventListener('mouseup', sendCursorPosition);
+  editor.addEventListener('touchend', sendCursorPosition);
+  editor.addEventListener('select', sendCursorPosition);
+
+  let cursorDebounce = null;
+  function sendCursorPosition() {
+    clearTimeout(cursorDebounce);
+    cursorDebounce = setTimeout(() => {
+      sendIfOpen({
+        type: 'cursor',
+        cursor_pos: editor.selectionStart,
+        selection_start: editor.selectionStart,
+        selection_end: editor.selectionEnd,
+      });
+    }, 30);
+  }
+
+  // ── Title sync ─────────────────────────────────────────
+  let titleDebounce = null;
+  docTitle.addEventListener('input', () => {
+    clearTimeout(titleDebounce);
+    titleDebounce = setTimeout(() => {
+      document.title = `${docTitle.value} — CollabDocs`;
+      sendIfOpen({ type: 'title_change', title: docTitle.value });
+    }, 300);
+  });
+
+  // ── Remote cursor rendering ────────────────────────────
+  // We approximate cursor pixel position from char index.
+  // This is a simplified approach — in prod you'd use Range API.
+  const cursorElems = {};
+
+  function updateRemoteCursorUI(userId, charPos, name, color) {
+    // We'll use a char-offset based approach
+    // Get pixel coords by measuring text before cursor
+    const coords = getCharCoords(charPos);
+    if (!coords) return;
+
+    let elem = cursorElems[userId];
+    if (!elem) {
+      elem = document.createElement('div');
+      elem.className = 'remote-cursor';
+      elem.innerHTML = `
+        <div class="remote-cursor-label" style="background:${color}">${escHtml(name)}</div>
+        <div class="remote-cursor-line" style="background:${color}"></div>
+      `;
+      document.getElementById('cursor-layer').appendChild(elem);
+      cursorElems[userId] = elem;
+    }
+
+    elem.style.left = `${coords.x}px`;
+    elem.style.top = `${coords.y}px`;
+    elem.querySelector('.remote-cursor-label').style.background = color;
+    elem.querySelector('.remote-cursor-line').style.background = color;
+    elem.querySelector('.remote-cursor-label').textContent = name;
+  }
+
+  function removeRemoteCursor(userId) {
+    const elem = cursorElems[userId];
+    if (elem) {
+      elem.remove();
+      delete cursorElems[userId];
+    }
+  }
+
+  function getCharCoords(charIndex) {
+    // Measure by creating a hidden mirror of textarea content
+    const editorRect = editor.getBoundingClientRect();
+    const pageRect = document.getElementById('page').getBoundingClientRect();
+
+    const mirror = document.createElement('div');
+    const styles = window.getComputedStyle(editor);
+    
+    Object.assign(mirror.style, {
+      position: 'absolute',
+      top: '-9999px',
+      left: '-9999px',
+      width: `${editor.clientWidth}px`,
+      fontFamily: styles.fontFamily,
+      fontSize: styles.fontSize,
+      lineHeight: styles.lineHeight,
+      padding: styles.padding,
+      whiteSpace: 'pre-wrap',
+      wordWrap: 'break-word',
+      overflowWrap: 'break-word',
+      visibility: 'hidden',
+    });
+
+    const text = editor.value.slice(0, charIndex);
+    const before = document.createTextNode(text);
+    const span = document.createElement('span');
+    span.textContent = '|';
+    mirror.appendChild(before);
+    mirror.appendChild(span);
+    document.body.appendChild(mirror);
+
+    const spanRect = span.getBoundingClientRect();
+    const mirrorRect = mirror.getBoundingClientRect();
+    const x = spanRect.left - mirrorRect.left + (editorRect.left - pageRect.left);
+    const y = spanRect.top - mirrorRect.top + (editorRect.top - pageRect.top);
+
+    document.body.removeChild(mirror);
+    return { x, y };
+  }
+
+  // ── User avatars ───────────────────────────────────────
+  function renderUsers(users) {
+    userAvatars.innerHTML = '';
+    const maxShow = 5;
+    const shown = users.slice(0, maxShow);
+
+    shown.forEach(u => {
+      const div = document.createElement('div');
+      div.className = 'avatar';
+      div.style.background = u.color;
+      div.textContent = (u.name || '?')[0].toUpperCase();
+      if (u.user_id === myUserId) {
+        div.style.border = '2px solid ' + u.color;
+        div.style.boxShadow = `0 0 0 2px white, 0 0 0 3px ${u.color}`;
+      }
+      const tooltip = document.createElement('div');
+      tooltip.className = 'avatar-tooltip';
+      tooltip.style.background = u.color;
+      tooltip.textContent = u.user_id === myUserId ? `${u.name} (you)` : u.name;
+      div.appendChild(tooltip);
+      userAvatars.appendChild(div);
+    });
+
+    if (users.length > maxShow) {
+      const more = document.createElement('div');
+      more.className = 'avatar';
+      more.style.background = '#888';
+      more.textContent = `+${users.length - maxShow}`;
+      userAvatars.appendChild(more);
+    }
+  }
+
+  // ── Activity/typing indicator ──────────────────────────
+  const typingTimeouts = {};
+
+  function showTypingActivity(userId, name) {
+    typingUsers[userId] = name;
+    clearTimeout(typingTimeouts[userId]);
+    typingTimeouts[userId] = setTimeout(() => {
+      delete typingUsers[userId];
+      updateActivityBar();
+    }, 2000);
+    updateActivityBar();
+  }
+
+  function updateActivityBar() {
+    const names = Object.values(typingUsers).filter(n => true);
+    if (names.length === 0) {
+      activityBar.classList.add('hidden');
+      return;
+    }
+    activityBar.classList.remove('hidden');
+    const label = names.length === 1
+      ? `${names[0]} is typing`
+      : `${names.slice(0,-1).join(', ')} and ${names[names.length-1]} are typing`;
+    activityText.textContent = label;
+  }
+
+  // ── Notifications ──────────────────────────────────────
+  function showNotif(text, color) {
+    const div = document.createElement('div');
+    div.className = 'notif';
+    div.innerHTML = `<div class="notif-dot" style="background:${color}"></div><span>${escHtml(text)}</span>`;
+    notifs.appendChild(div);
+    setTimeout(() => div.remove(), 3500);
+  }
+
+  // ── Status ─────────────────────────────────────────────
+  function setStatus(state, text) {
+    statusBadge.className = `${state}`;
+    statusText.textContent = text;
+  }
+
+  function updateVersionDisplay() {
+    versionDisplay.textContent = `v${serverVersion}`;
+  }
+
+  // ── Heartbeat ──────────────────────────────────────────
+  let heartbeatInterval;
+  function scheduleHeartbeat() {
+    clearInterval(heartbeatInterval);
+    heartbeatInterval = setInterval(() => {
+      sendIfOpen({ type: 'ping' });
+    }, 10000);
+  }
+
+  function sendIfOpen(msg) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(msg));
+    }
+  }
+
+  // ── Share modal ────────────────────────────────────────
+  shareBtn.addEventListener('click', () => {
+    shareLinkInput.value = getShareUrl();
+    shareModal.classList.add('open');
+    shareLinkInput.select();
+  });
+
+  modalCloseBtn.addEventListener('click', () => {
+    shareModal.classList.remove('open');
+  });
+
+  shareModal.addEventListener('click', (e) => {
+    if (e.target === shareModal) shareModal.classList.remove('open');
+  });
+
+  copyLinkBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(shareLinkInput.value).then(() => {
+      copyLinkBtn.textContent = '✓ Copied!';
+      copyLinkBtn.classList.add('copied');
+      setTimeout(() => {
+        copyLinkBtn.textContent = 'Copy';
+        copyLinkBtn.classList.remove('copied');
+      }, 2000);
+    });
+  });
+
+  // ── New doc ────────────────────────────────────────────
+  newDocBtn.addEventListener('click', async () => {
+    const res = await fetch('/api/docs', { method: 'POST' });
+    const data = await res.json();
+    window.location.href = data.url;
+  });
+
+  // ── Escape util ────────────────────────────────────────
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ── Init ───────────────────────────────────────────────
+  connect();
+
+})();
+</script>
+</body>
+</html>

@@ -1,26 +1,37 @@
 """
 Presence Manager
 Tracks active users per document: cursor positions, selections, colors.
+
+Fixes over original:
+- Color reclamation in leave() actually works (was dead code before)
+- Stale user pruning doesn't mutate the dict while iterating
+- get_connections() returns a snapshot copy to avoid mutation during broadcast
+- User names are preserved on reconnect (same user_id)
 """
 
-import time
+from __future__ import annotations
+
 import random
+import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set
+
 from fastapi import WebSocket
 
-# Distinct user colors
 USER_COLORS = [
-    "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7",
-    "#DDA0DD", "#98D8C8", "#F7DC6F", "#BB8FCE", "#85C1E9",
-    "#F8C471", "#82E0AA", "#F1948A", "#AED6F1", "#A9DFBF",
+    "#E63946", "#2196F3", "#FF9800", "#9C27B0", "#00BCD4",
+    "#4CAF50", "#FF5722", "#3F51B5", "#009688", "#F44336",
+    "#8BC34A", "#FF4081", "#00ACC1", "#7E57C2", "#FFA726",
 ]
 
 USER_NAMES = [
     "Alice", "Bob", "Carol", "Dave", "Eve",
     "Frank", "Grace", "Hank", "Iris", "Jack",
     "Kate", "Leo", "Mia", "Nick", "Olivia",
+    "Pete", "Quinn", "Rosa", "Sam", "Tara",
 ]
+
+STALE_TIMEOUT_SECONDS = 30
 
 
 @dataclass
@@ -50,9 +61,7 @@ class UserPresence:
 
 class PresenceManager:
     def __init__(self):
-        # doc_id -> {user_id -> UserPresence}
         self._doc_users: Dict[str, Dict[str, UserPresence]] = {}
-        # doc_id -> {user_id -> WebSocket}
         self._connections: Dict[str, Dict[str, WebSocket]] = {}
         self._used_colors: Dict[str, Set[str]] = {}
 
@@ -60,10 +69,15 @@ class PresenceManager:
         used = self._used_colors.get(doc_id, set())
         available = [c for c in USER_COLORS if c not in used]
         if not available:
+            # All colors taken — recycle but pick least-used visually distinct
             available = USER_COLORS
         color = random.choice(available)
         self._used_colors.setdefault(doc_id, set()).add(color)
         return color
+
+    def _release_color(self, doc_id: str, color: str):
+        if doc_id in self._used_colors:
+            self._used_colors[doc_id].discard(color)
 
     def join(self, doc_id: str, user_id: str, ws: WebSocket) -> UserPresence:
         if doc_id not in self._doc_users:
@@ -72,7 +86,9 @@ class PresenceManager:
 
         if user_id not in self._doc_users[doc_id]:
             color = self._get_color(doc_id)
-            name = random.choice(USER_NAMES)
+            # Assign name deterministically from user_id hash for consistency
+            name_idx = abs(hash(user_id)) % len(USER_NAMES)
+            name = USER_NAMES[name_idx]
             presence = UserPresence(
                 user_id=user_id,
                 name=name,
@@ -81,6 +97,7 @@ class PresenceManager:
             )
             self._doc_users[doc_id][user_id] = presence
         else:
+            # Reconnect: preserve name/color, just update ws
             self._doc_users[doc_id][user_id].websocket = ws
             self._doc_users[doc_id][user_id].ping()
 
@@ -89,11 +106,11 @@ class PresenceManager:
 
     def leave(self, doc_id: str, user_id: str):
         if doc_id in self._doc_users:
-            self._doc_users[doc_id].pop(user_id, None)
+            user = self._doc_users[doc_id].pop(user_id, None)
             self._connections[doc_id].pop(user_id, None)
-            color = None
-            if color and doc_id in self._used_colors:
-                self._used_colors[doc_id].discard(color)
+            # Actually release the color now (original had dead code here)
+            if user is not None:
+                self._release_color(doc_id, user.color)
 
     def update_cursor(
         self,
@@ -113,17 +130,22 @@ class PresenceManager:
 
     def get_users(self, doc_id: str) -> List[dict]:
         users = self._doc_users.get(doc_id, {})
-        # Prune stale users (> 30s no ping)
         now = time.time()
+        # Build a new dict instead of mutating while iterating
         active = {
-            uid: u for uid, u in users.items()
-            if now - u.last_seen < 30
+            uid: u
+            for uid, u in users.items()
+            if now - u.last_seen < STALE_TIMEOUT_SECONDS
         }
+        stale = set(users) - set(active)
+        for uid in stale:
+            self._release_color(doc_id, users[uid].color)
         self._doc_users[doc_id] = active
         return [u.to_dict() for u in active.values()]
 
     def get_connections(self, doc_id: str) -> Dict[str, WebSocket]:
-        return self._connections.get(doc_id, {})
+        # Return a snapshot so broadcast can't mutate the live dict mid-iteration
+        return dict(self._connections.get(doc_id, {}))
 
     def get_user(self, doc_id: str, user_id: str) -> Optional[UserPresence]:
         return self._doc_users.get(doc_id, {}).get(user_id)

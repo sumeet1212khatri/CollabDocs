@@ -584,14 +584,7 @@
 
 <script>
 // ══════════════════════════════════════════════════════════════════════════
-//  CollabDocs — Client
-//
-//  Key fixes over original:
-//  1. Myers diff for accurate op generation (handles paste, multi-delete, undo)
-//  2. Cursor mirror is cached and reused — not created/destroyed per update
-//  3. Proper OT client state machine with in-flight + queued op separation
-//  4. Exponential backoff reconnect
-//  5. Cursor rendering uses ResizeObserver to invalidate mirror on resize
+//  CollabDocs — Updated Client with OT Transformation logic
 // ══════════════════════════════════════════════════════════════════════════
 
 (function () {
@@ -604,11 +597,6 @@
   let myColor = null;
   let docId = null;
 
-  // OT client state:
-  //   serverVersion  — last version confirmed by server
-  //   inFlight       — single op sent, awaiting ack (null if none)
-  //   pendingQueue   — ops composed locally, not yet sent
-  // Classic OT client: only one op in-flight at a time.
   let serverVersion = 0;
   let inFlight = null;       // { op, op_id }
   let pendingQueue = [];     // ops waiting for in-flight ack
@@ -616,15 +604,12 @@
   let isApplyingRemote = false;
   let prevContent = '';
 
-  // Remote cursors: userId -> { pos, name, color }
   const remoteCursors = {};
-  const cursorElems = {};    // userId -> DOM element
+  const cursorElems = {};
 
-  // Typing activity
   const typingUsers = {};
   const typingTimers = {};
 
-  // Reconnect state
   let reconnectAttempts = 0;
   let reconnectTimer = null;
 
@@ -647,6 +632,74 @@
   const activityText = document.getElementById('activity-text');
   const saveIndicator = document.getElementById('save-indicator');
 
+  // ── OT Pairwise Transformations ───────────────────────
+
+  function transform_ii(op, against) {
+    let result = { ...op };
+    if (against.position < op.position) {
+      result.position += against.value.length;
+    } else if (against.position === op.position) {
+      // Tie-break: lower user_id goes first
+      if (against.user_id <= op.user_id) result.position += against.value.length;
+    }
+    return result;
+  }
+
+  function transform_id(op, against) {
+    let result = { ...op };
+    const del_start = against.position;
+    const del_end = against.position + against.length;
+    if (del_end <= op.position) {
+      result.position -= against.length;
+    } else if (del_start < op.position) {
+      result.position = del_start;
+    }
+    return result;
+  }
+
+  function transform_di(op, against) {
+    let result = { ...op };
+    const ins_pos = against.position;
+    const ins_len = against.value.length;
+    const del_end = op.position + op.length;
+    if (ins_pos < op.position) {
+      result.position += ins_len;
+    } else if (ins_pos <= del_end) {
+      result.length += ins_len;
+    }
+    return result;
+  }
+
+  function transform_dd(op, against) {
+    let result = { ...op };
+    const op_start = op.position;
+    const op_end = op.position + op.length;
+    const ag_start = against.position;
+    const ag_end = against.position + against.length;
+    if (ag_end <= op_start) {
+      result.position -= against.length;
+    } else if (ag_start >= op_end) {
+      // no change
+    } else {
+      const overlap_start = Math.max(op_start, ag_start);
+      const overlap_end = Math.min(op_end, ag_end);
+      const overlap = overlap_end - overlap_start;
+      if (ag_start < op_start) result.position = ag_start;
+      result.length = Math.max(0, op.length - overlap);
+    }
+    return result;
+  }
+
+  function transformOperation(incoming, applied) {
+    if (incoming.op_type === 'insert') {
+      if (applied.op_type === 'insert' || applied.type === 'insert') return transform_ii(incoming, applied);
+      else return transform_id(incoming, applied);
+    } else {
+      if (applied.op_type === 'insert' || applied.type === 'insert') return transform_di(incoming, applied);
+      else return transform_dd(incoming, applied);
+    }
+  }
+
   // ── Routing ──────────────────────────────────────────────────────────────
   function getDocId() {
     return new URLSearchParams(window.location.search).get('doc') || 'welcome';
@@ -662,28 +715,17 @@
   }
 
   // ── Myers diff ────────────────────────────────────────────────────────────
-  // Produces a minimal list of {type, pos, text/len} edit ops.
-  // This handles paste-over-selection, undo, multi-char delete correctly —
-  // the original prefix/suffix heuristic fails on those cases.
   function myersDiff(oldStr, newStr) {
-    const m = oldStr.length;
-    const n = newStr.length;
-
+    const m = oldStr.length, n = newStr.length;
     if (m === 0 && n === 0) return [];
     if (m === 0) return [{ type: 'insert', pos: 0, text: newStr }];
     if (n === 0) return [{ type: 'delete', pos: 0, len: m }];
-
-    // Short-circuit: find common prefix
     let p = 0;
     while (p < m && p < n && oldStr[p] === newStr[p]) p++;
-
-    // Find common suffix (after common prefix)
     let os = m - 1, ns = n - 1;
     while (os >= p && ns >= p && oldStr[os] === newStr[ns]) { os--; ns--; }
-
     const deletedLen = os - p + 1;
     const insertedStr = newStr.slice(p, ns + 1);
-
     const ops = [];
     if (deletedLen > 0) ops.push({ type: 'delete', pos: p, len: deletedLen });
     if (insertedStr.length > 0) ops.push({ type: 'insert', pos: p, text: insertedStr });
@@ -696,10 +738,9 @@
       const msg = d.type === 'insert'
         ? { op_type: 'insert', position: d.pos, value: d.text, length: d.text.length }
         : { op_type: 'delete', position: d.pos, value: '', length: d.len };
-
       msg.op_id = Math.random().toString(36).slice(2, 11);
       msg.base_version = serverVersion;
-
+      msg.user_id = myUserId;
       pendingQueue.push(msg);
     }
     flushPending();
@@ -708,7 +749,6 @@
   function flushPending() {
     if (inFlight !== null || pendingQueue.length === 0) return;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-
     inFlight = pendingQueue.shift();
     inFlight.type = 'operation';
     ws.send(JSON.stringify(inFlight));
@@ -719,35 +759,16 @@
   function connect() {
     docId = getDocId();
     myUserId = getUserId();
-
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     const url = `${proto}://${location.host}/ws/${docId}?user_id=${myUserId}`;
-
     ws = new WebSocket(url);
-
-    ws.onopen = () => {
-      setStatus('connected', 'Connected');
-      reconnectAttempts = 0;
-      startHeartbeat();
-    };
-
-    ws.onclose = () => {
-      setStatus('', 'Reconnecting…');
-      stopHeartbeat();
-      scheduleReconnect();
-    };
-
-    ws.onerror = (e) => console.error('[WS] error', e);
-
-    ws.onmessage = ({ data }) => {
-      try { handleMessage(JSON.parse(data)); }
-      catch (e) { console.error('[WS] parse error', e); }
-    };
+    ws.onopen = () => { setStatus('connected', 'Connected'); reconnectAttempts = 0; startHeartbeat(); };
+    ws.onclose = () => { setStatus('', 'Reconnecting…'); stopHeartbeat(); scheduleReconnect(); };
+    ws.onmessage = ({ data }) => { try { handleMessage(JSON.parse(data)); } catch (e) { console.error('[WS] parse error', e); } };
   }
 
   function scheduleReconnect() {
     clearTimeout(reconnectTimer);
-    // Exponential backoff: 1s, 2s, 4s, 8s, capped at 16s
     const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 16000);
     reconnectAttempts++;
     reconnectTimer = setTimeout(connect, delay);
@@ -767,17 +788,12 @@
   }
 
   function onInit(msg) {
-    myUserId = msg.user_id;
-    myName = msg.name;
-    myColor = msg.color;
-
+    myUserId = msg.user_id; myName = msg.name; myColor = msg.color;
     serverVersion = msg.doc_state.version;
-
     isApplyingRemote = true;
     editor.value = msg.doc_state.content;
     prevContent = msg.doc_state.content;
     isApplyingRemote = false;
-
     docTitleEl.value = msg.doc_state.title || 'Untitled Document';
     document.title = `${docTitleEl.value} — CollabDocs`;
     updateVersionChip();
@@ -786,28 +802,36 @@
 
   function onRemoteOp(msg) {
     if (msg.user_id === myUserId) return;
-
     serverVersion = msg.server_version;
     updateVersionChip();
+
+    // MISSING LINK: Transform remote op against our un-acked local ops
+    let transformedRemote = { ...msg };
+    if (inFlight) {
+        transformedRemote = transformOperation(transformedRemote, inFlight);
+    }
+    for (let i = 0; i < pendingQueue.length; i++) {
+        const opInQueue = pendingQueue[i];
+        transformedRemote = transformOperation(transformedRemote, opInQueue);
+        pendingQueue[i] = transformOperation(opInQueue, transformedRemote);
+    }
 
     const savedStart = editor.selectionStart;
     const savedEnd = editor.selectionEnd;
 
     isApplyingRemote = true;
-    editor.value = applyOpToString(editor.value, msg);
+    editor.value = applyOpToString(editor.value, transformedRemote);
     prevContent = editor.value;
     isApplyingRemote = false;
 
-    // Adjust local cursor
-    const newStart = shiftCursor(savedStart, msg);
-    const newEnd = shiftCursor(savedEnd, msg);
+    const newStart = shiftCursor(savedStart, transformedRemote);
+    const newEnd = shiftCursor(savedEnd, transformedRemote);
     editor.setSelectionRange(newStart, newEnd);
-
     showTyping(msg.user_id, remoteCursors[msg.user_id]?.name || 'Someone');
   }
 
   function onAck(msg) {
-    if (inFlight && inFlight.op_id === msg.op_id) {
+    if (inFlight && (inFlight.op_id === msg.op_id)) {
       inFlight = null;
       serverVersion = msg.server_version;
       updateVersionChip();
@@ -879,18 +903,9 @@
   editor.addEventListener('select', debounceSendCursor);
 
   let cursorTimer = null;
-  function debounceSendCursor() {
-    clearTimeout(cursorTimer);
-    cursorTimer = setTimeout(sendCursor, 30);
-  }
-
+  function debounceSendCursor() { clearTimeout(cursorTimer); cursorTimer = setTimeout(sendCursor, 30); }
   function sendCursor() {
-    send({
-      type: 'cursor',
-      cursor_pos: editor.selectionStart,
-      selection_start: editor.selectionStart,
-      selection_end: editor.selectionEnd,
-    });
+    send({ type: 'cursor', cursor_pos: editor.selectionStart, selection_start: editor.selectionStart, selection_end: editor.selectionEnd });
   }
 
   // ── Title ─────────────────────────────────────────────────────────────────
@@ -904,65 +919,42 @@
   });
 
   // ── Cursor rendering ──────────────────────────────────────────────────────
-  // We keep a single persistent mirror div (never destroyed) for measuring.
-  // On resize, we invalidate all cursor positions.
   let mirrorEl = null;
-
   function getMirror() {
     if (!mirrorEl) {
       mirrorEl = document.createElement('div');
       const s = window.getComputedStyle(editor);
       Object.assign(mirrorEl.style, {
-        position: 'fixed',
-        top: '-9999px',
-        left: '-9999px',
-        visibility: 'hidden',
-        fontFamily: s.fontFamily,
-        fontSize: s.fontSize,
-        fontWeight: s.fontWeight,
-        lineHeight: s.lineHeight,
-        letterSpacing: s.letterSpacing,
-        whiteSpace: 'pre-wrap',
-        wordWrap: 'break-word',
-        overflowWrap: 'break-word',
-        padding: s.padding,
-        // Width must match editor to get correct line wrapping
-        width: editor.clientWidth + 'px',
-        boxSizing: 'border-box',
+        position: 'fixed', top: '-9999px', left: '-9999px', visibility: 'hidden',
+        fontFamily: s.fontFamily, fontSize: s.fontSize, fontWeight: s.fontWeight,
+        lineHeight: s.lineHeight, letterSpacing: s.letterSpacing,
+        whiteSpace: 'pre-wrap', wordWrap: 'break-word', overflowWrap: 'break-word',
+        padding: s.padding, width: editor.clientWidth + 'px', boxSizing: 'border-box',
       });
       document.body.appendChild(mirrorEl);
     }
-    // Keep width in sync
     mirrorEl.style.width = editor.clientWidth + 'px';
     return mirrorEl;
   }
 
-  // Invalidate mirror on editor resize
   const resizeObserver = new ResizeObserver(() => {
     if (mirrorEl) mirrorEl.style.width = editor.clientWidth + 'px';
-    // Re-render all remote cursors
-    for (const [uid, c] of Object.entries(remoteCursors)) {
-      renderRemoteCursor(uid, c.pos, c.name, c.color);
-    }
+    for (const [uid, c] of Object.entries(remoteCursors)) renderRemoteCursor(uid, c.pos, c.name, c.color);
   });
   resizeObserver.observe(editor);
 
   function getCharCoords(charIndex) {
     const mirror = getMirror();
     const text = editor.value.slice(0, charIndex);
-
-    // Build mirror content with a sentinel span
     mirror.innerHTML = '';
     mirror.appendChild(document.createTextNode(text));
     const span = document.createElement('span');
-    span.textContent = '\u200b'; // zero-width space
+    span.textContent = '\u200b';
     mirror.appendChild(span);
-
     const editorRect = editor.getBoundingClientRect();
     const pageRect = document.getElementById('page').getBoundingClientRect();
     const spanRect = span.getBoundingClientRect();
     const mirrorRect = mirror.getBoundingClientRect();
-
     return {
       x: spanRect.left - mirrorRect.left + (editorRect.left - pageRect.left),
       y: spanRect.top  - mirrorRect.top  + (editorRect.top  - pageRect.top),
@@ -971,55 +963,36 @@
 
   function renderRemoteCursor(userId, charPos, name, color) {
     const coords = getCharCoords(charPos);
-
     let el = cursorElems[userId];
     if (!el) {
-      el = document.createElement('div');
-      el.className = 'r-cursor';
-      el.innerHTML = `
-        <div class="r-cursor-label" style="background:${esc(color)}">${esc(name)}</div>
-        <div class="r-cursor-caret" style="background:${esc(color)}"></div>
-      `;
+      el = document.createElement('div'); el.className = 'r-cursor';
+      el.innerHTML = `<div class="r-cursor-label" style="background:${esc(color)}">${esc(name)}</div><div class="r-cursor-caret" style="background:${esc(color)}"></div>`;
       document.getElementById('cursor-layer').appendChild(el);
       cursorElems[userId] = el;
     }
-
-    el.style.left = `${coords.x}px`;
-    el.style.top  = `${coords.y}px`;
+    el.style.left = `${coords.x}px`; el.style.top  = `${coords.y}px`;
     el.querySelector('.r-cursor-label').style.background = color;
     el.querySelector('.r-cursor-caret').style.background = color;
     el.querySelector('.r-cursor-label').textContent = name;
   }
 
-  function removeCursor(userId) {
-    cursorElems[userId]?.remove();
-    delete cursorElems[userId];
-  }
+  function removeCursor(userId) { cursorElems[userId]?.remove(); delete cursorElems[userId]; }
 
   // ── Avatars ────────────────────────────────────────────────────────────────
   function renderAvatars(users) {
     userAvatars.innerHTML = '';
     const MAX = 5;
     users.slice(0, MAX).forEach(u => {
-      const div = document.createElement('div');
-      div.className = 'avatar';
-      div.style.background = u.color;
-      div.textContent = (u.name || '?')[0];
-      if (u.user_id === myUserId) {
-        div.style.outline = `2px solid ${u.color}`;
-        div.style.outlineOffset = '1px';
-      }
-      const tip = document.createElement('div');
-      tip.className = 'avatar-tip';
+      const div = document.createElement('div'); div.className = 'avatar';
+      div.style.background = u.color; div.textContent = (u.name || '?')[0];
+      if (u.user_id === myUserId) { div.style.outline = `2px solid ${u.color}`; div.style.outlineOffset = '1px'; }
+      const tip = document.createElement('div'); tip.className = 'avatar-tip';
       tip.textContent = u.user_id === myUserId ? `${u.name} (you)` : u.name;
-      div.appendChild(tip);
-      userAvatars.appendChild(div);
+      div.appendChild(tip); userAvatars.appendChild(div);
     });
     if (users.length > MAX) {
-      const more = document.createElement('div');
-      more.className = 'avatar';
-      more.style.background = '#888';
-      more.textContent = `+${users.length - MAX}`;
+      const more = document.createElement('div'); more.className = 'avatar';
+      more.style.background = '#888'; more.textContent = `+${users.length - MAX}`;
       userAvatars.appendChild(more);
     }
   }
@@ -1028,111 +1001,64 @@
   function showTyping(userId, name) {
     typingUsers[userId] = name;
     clearTimeout(typingTimers[userId]);
-    typingTimers[userId] = setTimeout(() => {
-      delete typingUsers[userId];
-      updateActivityBar();
-    }, 2000);
+    typingTimers[userId] = setTimeout(() => { delete typingUsers[userId]; updateActivityBar(); }, 2000);
     updateActivityBar();
   }
 
   function updateActivityBar() {
     const names = Object.values(typingUsers);
-    if (names.length === 0) {
-      activityBar.classList.add('hidden');
-      return;
-    }
+    if (names.length === 0) { activityBar.classList.add('hidden'); return; }
     activityBar.classList.remove('hidden');
-    activityText.textContent = names.length === 1
-      ? `${names[0]} is typing`
-      : `${names.slice(0, -1).join(', ')} & ${names.at(-1)} are typing`;
+    activityText.textContent = names.length === 1 ? `${names[0]} is typing` : `${names.slice(0, -1).join(', ')} & ${names.at(-1)} are typing`;
   }
 
-  // ── Toast notifications ────────────────────────────────────────────────────
   function toast(text, color) {
-    const div = document.createElement('div');
-    div.className = 'toast';
+    const div = document.createElement('div'); div.className = 'toast';
     div.innerHTML = `<div class="toast-dot" style="background:${esc(color)}"></div><span>${esc(text)}</span>`;
-    toastsEl.appendChild(div);
-    setTimeout(() => div.remove(), 3200);
+    toastsEl.appendChild(div); setTimeout(() => div.remove(), 3200);
   }
 
-  // ── Status / UI helpers ────────────────────────────────────────────────────
   function setStatus(state, text) {
     statusBadge.className = state ? `${state}` : '';
     statusText.textContent = text;
     statusDot.className = 'status-dot' + (state === 'connected' ? ' pulse' : '');
   }
 
-  function updateVersionChip() {
-    versionChip.textContent = `v${serverVersion}`;
-  }
+  function updateVersionChip() { versionChip.textContent = `v${serverVersion}`; }
 
   let saveTimer = null;
   function setSaveIndicator(state) {
     clearTimeout(saveTimer);
-    if (state === 'saving') {
-      saveIndicator.textContent = 'Saving…';
-      saveIndicator.className = 'saving';
-    } else {
-      saveIndicator.textContent = 'Saved';
-      saveIndicator.className = '';
-    }
+    if (state === 'saving') { saveIndicator.textContent = 'Saving…'; saveIndicator.className = 'saving'; }
+    else { saveIndicator.textContent = 'Saved'; saveIndicator.className = ''; }
   }
 
-  // ── Heartbeat ──────────────────────────────────────────────────────────────
   let heartbeatId = null;
-  function startHeartbeat() {
-    clearInterval(heartbeatId);
-    heartbeatId = setInterval(() => send({ type: 'ping' }), 10000);
-  }
-
+  function startHeartbeat() { clearInterval(heartbeatId); heartbeatId = setInterval(() => send({ type: 'ping' }), 10000); }
   function stopHeartbeat() { clearInterval(heartbeatId); }
+  function send(msg) { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg)); }
 
-  function send(msg) {
-    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
-  }
-
-  // ── Share modal ────────────────────────────────────────────────────────────
   shareBtn.addEventListener('click', () => {
     const url = `${location.origin}${location.pathname}?doc=${docId}`;
-    shareLinkInput.value = url;
-    shareModal.classList.add('open');
-    shareLinkInput.select();
+    shareLinkInput.value = url; shareModal.classList.add('open'); shareLinkInput.select();
   });
-
   modalClose.addEventListener('click', () => shareModal.classList.remove('open'));
   shareModal.addEventListener('click', e => { if (e.target === shareModal) shareModal.classList.remove('open'); });
-
   copyBtn.addEventListener('click', () => {
     navigator.clipboard.writeText(shareLinkInput.value).then(() => {
-      copyBtn.textContent = '✓ Copied';
-      copyBtn.classList.add('copied');
-      setTimeout(() => {
-        copyBtn.textContent = 'Copy';
-        copyBtn.classList.remove('copied');
-      }, 2000);
+      copyBtn.textContent = '✓ Copied'; copyBtn.classList.add('copied');
+      setTimeout(() => { copyBtn.textContent = 'Copy'; copyBtn.classList.remove('copied'); }, 2000);
     });
   });
 
-  // ── New doc ────────────────────────────────────────────────────────────────
   newDocBtn.addEventListener('click', async () => {
     const res = await fetch('/api/docs', { method: 'POST' });
-    const data = await res.json();
-    window.location.href = data.url;
+    const data = await res.json(); window.location.href = data.url;
   });
 
-  // ── Escape util ────────────────────────────────────────────────────────────
-  function esc(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
+  function esc(str) { return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-  // ── Init ───────────────────────────────────────────────────────────────────
   connect();
-
 })();
 </script>
 </body>

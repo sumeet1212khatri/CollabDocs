@@ -100,18 +100,11 @@ struct Document {
     {
         pending_broadcast.push_back(std::move(op_json));
 
-        auto now = std::chrono::steady_clock::now();
-        auto age_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                          now - last_flush).count();
-
-        bool full   = static_cast<int>(pending_broadcast.size()) >= BATCH_MAX_OPS;
-        bool stale  = age_ms >= BATCH_MAX_MS;
-
-        if (full || stale) {
-            flush_broadcast_locked(exclude_user);
-            return true;
-        }
-        return false;
+        // Always flush immediately because we don't have a background timer thread.
+        // If we only flush when limits are reached, the last few operations
+        // will get stuck in the queue indefinitely.
+        flush_broadcast_locked(exclude_user);
+        return true;
     }
 
     // Flush pending ops as a single "batch" message.
@@ -150,8 +143,12 @@ struct Document {
 
     // Call this AFTER releasing mu to fire any deferred broadcast callbacks.
     void fire_pending_broadcasts() {
-        for (auto& cb : pending_after_unlock_) cb();
-        pending_after_unlock_.clear();
+        std::vector<std::function<void()>> cbs;
+        {
+            std::lock_guard<std::mutex> lk(mu);
+            cbs.swap(pending_after_unlock_);
+        }
+        for (auto& cb : cbs) cb();
     }
 
     nlohmann::json get_state_json() const;

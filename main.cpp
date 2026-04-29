@@ -303,14 +303,21 @@ private:
     void handle_message(const std::string& raw,
                         std::shared_ptr<collab::Document> doc)
     {
-        json msg;
-        try { msg = json::parse(raw); } catch (...) { return; }
-
-        std::string type = msg.value("type", "");
-        if      (type == "operation")    handle_operation(msg, doc);
-        else if (type == "cursor")       handle_cursor(msg);
-        else if (type == "title_change") handle_title_change(msg);
-        else if (type == "ping")         { /* keep-alive, no-op */ }
+        try {
+            json msg = json::parse(raw);
+            std::string type = msg.value("type", "");
+            if      (type == "operation")    handle_operation(msg, doc);
+            else if (type == "cursor")       handle_cursor(msg);
+            else if (type == "title_change") handle_title_change(msg);
+            else if (type == "ping") {
+                json pong = msg;
+                pong["type"] = "pong";
+                enqueue_send(pong.dump());
+            }
+        } catch (...) {
+            // Ignore malformed messages or type errors to prevent crashing
+            return;
+        }
     }
 
     // ── Operation handler (with broadcast batching) ───────────────────────────

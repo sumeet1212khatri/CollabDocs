@@ -185,7 +185,7 @@
   }
 
   .r-cursor { position: absolute; pointer-events: none; will-change: left, top; }
-  .r-cursor-caret { width: 2px; height: 20px; border-radius: 1px; animation: caret-blink 1.1s ease-in-out infinite; }
+  .r-cursor-caret { width: 2px; height: 22px; border-radius: 1px; transform: translateY(4px); animation: caret-blink 1.1s ease-in-out infinite; }
 
   @keyframes caret-blink {
     0%, 45%, 100% { opacity: 1; }
@@ -289,6 +289,15 @@
 
   #save-indicator { font-size: 11.5px; color: var(--text-light); transition: opacity 0.3s; }
   #save-indicator.saving { color: var(--accent); }
+
+  #latency-badge {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; font-weight: 600; font-family: 'SF Mono', 'Fira Code', monospace;
+    padding: 4px 10px; border-radius: 20px;
+    border: 1px solid var(--border); background: var(--surface2);
+    color: var(--text-muted); white-space: nowrap;
+  }
+  .latency-val { color: var(--text); }
 </style>
 </head>
 <body>
@@ -300,6 +309,11 @@
   <div class="toolbar-right">
     <span id="save-indicator">Saved</span>
     <span id="version-chip">v0</span>
+    <div id="latency-badge">
+      P90: <span class="latency-val" id="lat-p90">--</span>
+      P95: <span class="latency-val" id="lat-p95">--</span>
+      P99: <span class="latency-val" id="lat-p99">--</span>
+    </div>
     <div id="user-avatars"></div>
     <div id="status-badge">
       <div class="status-dot pulse"></div>
@@ -378,6 +392,11 @@
   let reconnectAttempts = 0;
   let reconnectTimer    = null;
 
+  const latencies     = [];
+  const MAX_LATENCIES = 100;
+  const pendingPings  = new Map();
+  let pingIdCounter   = 0;
+
   // ── DOM ──────────────────────────────────────────────────────────────────────
   const editor       = document.getElementById('editor');
   const statusBadge  = document.getElementById('status-badge');
@@ -396,6 +415,9 @@
   const activityBar  = document.getElementById('activity-bar');
   const activityText = document.getElementById('activity-text');
   const saveIndicator= document.getElementById('save-indicator');
+  const latP90       = document.getElementById('lat-p90');
+  const latP95       = document.getElementById('lat-p95');
+  const latP99       = document.getElementById('lat-p99');
 
   // ── OT pairwise transforms ───────────────────────────────────────────────────
 
@@ -542,6 +564,7 @@
       case 'operation':    onRemoteOp(msg);     break;
       case 'batch':        onBatch(msg);        break;   // NEW: server batching
       case 'ack':          onAck(msg);          break;
+      case 'pong':         onPong(msg);         break;
       case 'cursor':       onRemoteCursor(msg); break;
       case 'user_joined':  onUserJoined(msg);   break;
       case 'user_left':    onUserLeft(msg);     break;
@@ -712,17 +735,31 @@
   function getMirror() {
     if (!mirrorEl) {
       mirrorEl = document.createElement('div');
-      const s = window.getComputedStyle(editor);
-      Object.assign(mirrorEl.style, {
-        position: 'fixed', top: '-9999px', left: '-9999px', visibility: 'hidden',
-        fontFamily: s.fontFamily, fontSize: s.fontSize, fontWeight: s.fontWeight,
-        lineHeight: s.lineHeight, letterSpacing: s.letterSpacing,
-        whiteSpace: 'pre-wrap', wordWrap: 'break-word', overflowWrap: 'break-word',
-        padding: s.padding, width: editor.clientWidth + 'px', boxSizing: 'border-box',
-      });
       document.body.appendChild(mirrorEl);
     }
+    const s = window.getComputedStyle(editor);
+    const props = [
+      'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'fontVariant',
+      'lineHeight', 'letterSpacing', 'wordSpacing', 'textIndent', 'whiteSpace',
+      'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+      'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
+      'boxSizing', 'tabSize', 'textAlign', 'textTransform', 'wordBreak', 'overflowWrap'
+    ];
+    
+    mirrorEl.style.position = 'fixed';
+    mirrorEl.style.top = '-9999px';
+    mirrorEl.style.left = '-9999px';
+    mirrorEl.style.visibility = 'hidden';
+    mirrorEl.style.overflow = 'hidden';
+    mirrorEl.style.whiteSpace = 'pre-wrap';
+    mirrorEl.style.wordWrap = 'break-word';
+    mirrorEl.style.overflowWrap = 'break-word';
+    
+    for (const p of props) {
+      mirrorEl.style[p] = s[p];
+    }
     mirrorEl.style.width = editor.clientWidth + 'px';
+    
     return mirrorEl;
   }
 
@@ -735,18 +772,19 @@
   function getCharCoords(charIndex) {
     const mirror   = getMirror();
     const text     = editor.value.slice(0, charIndex);
-    mirror.innerHTML = '';
-    mirror.appendChild(document.createTextNode(text));
+    mirror.textContent = text;
     const span = document.createElement('span');
     span.textContent = '\u200b';
     mirror.appendChild(span);
+
     const editorRect = editor.getBoundingClientRect();
     const pageRect   = document.getElementById('page').getBoundingClientRect();
     const spanRect   = span.getBoundingClientRect();
     const mirrorRect = mirror.getBoundingClientRect();
+
     return {
-      x: spanRect.left - mirrorRect.left + (editorRect.left - pageRect.left),
-      y: spanRect.top  - mirrorRect.top  + (editorRect.top  - pageRect.top),
+      x: spanRect.left - mirrorRect.left + (editorRect.left - pageRect.left) - editor.scrollLeft,
+      y: spanRect.top  - mirrorRect.top  + (editorRect.top  - pageRect.top) - editor.scrollTop,
     };
   }
 
@@ -838,8 +876,41 @@
     else                    { saveIndicator.textContent = 'Saved';   saveIndicator.className = ''; }
   }
 
+  function onPong(msg) {
+    const sentAt = pendingPings.get(msg.ping_id);
+    if (!sentAt) return;
+    pendingPings.delete(msg.ping_id);
+    
+    const rtt = performance.now() - sentAt;
+    latencies.push(rtt);
+    if (latencies.length > MAX_LATENCIES) latencies.shift();
+    
+    updateLatencyUI();
+  }
+
+  function updateLatencyUI() {
+    if (latencies.length === 0) return;
+    const sorted = [...latencies].sort((a, b) => a - b);
+    
+    const getP = (p) => {
+      const idx = Math.floor((p / 100) * (sorted.length - 1));
+      return Math.round(sorted[idx]);
+    };
+
+    latP90.textContent = getP(90) + 'ms';
+    latP95.textContent = getP(95) + 'ms';
+    latP99.textContent = getP(99) + 'ms';
+  }
+
   let heartbeatId = null;
-  function startHeartbeat() { clearInterval(heartbeatId); heartbeatId = setInterval(() => send({ type: 'ping' }), 10000); }
+  function startHeartbeat() { 
+    clearInterval(heartbeatId); 
+    heartbeatId = setInterval(() => {
+      const id = ++pingIdCounter;
+      pendingPings.set(id, performance.now());
+      send({ type: 'ping', ping_id: id }); 
+    }, 1000); 
+  }
   function stopHeartbeat()  { clearInterval(heartbeatId); }
   function send(msg)        { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg)); }
 

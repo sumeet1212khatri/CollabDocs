@@ -2,6 +2,8 @@
 
 # CollabDocs
 
+CollabDocs is a C++-based collaborative document editor with an HTML frontend, designed for real-time low-latency editing and deterministic conflict resolution using CRDT-like techniques; the repository includes CMake build scripts and a Dockerfile for easy deployment on port 7860 ideal for engineers evaluating real-time sync algorithms, performance benchmarking, and system-level design in C++.
+
 > Collaborative document tool combining a C++ backend with an HTML frontend.  
 > Purpose-built for low-latency editing and content sync across peers.
 
@@ -167,7 +169,3 @@ License & contact
 -----------------
 - License: [Choose a license — e.g., MIT] (add LICENSE file)
 - Maintainer: sumeet1212khatri — open to questions and PRs.
-
-Appendix: SEO summary for Google (single-paragraph)
----------------------------------------------------
-CollabDocs is a C++-based collaborative document editor with an HTML frontend, designed for real-time low-latency editing and deterministic conflict resolution using CRDT-like techniques; the repository includes CMake build scripts and a Dockerfile for easy deployment on port 7860 — ideal for engineers evaluating real-time sync algorithms, performance benchmarking, and system-level design in C++.

@@ -7,7 +7,8 @@ CollabDocs is a C++-based collaborative document editor with an HTML frontend, d
 > Collaborative document tool combining a C++ backend with an HTML frontend.  
 > Purpose-built for low-latency editing and content sync across peers.
 
-Badges: [Build Status] [License] [Language: C++, HTML]
+ ![Build Status](https://img.shields.io/github/actions/workflow/status/sumeet1212khatri/CollabDocs/ci.yml?branch=main) ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg) ![Top Language](https://img.shields.io/github/languages/top/sumeet1212khatri/CollabDocs) ![Docker Pulls](https://img.shields.io/docker/pulls/sumeet1212khatri/collabdocs)
+
 Keywords: collaborative editing, real-time sync, C++, CMake, Docker, low-latency
 
 Table of contents
